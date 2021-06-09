@@ -20,6 +20,7 @@ import JudoModel
 struct TextView: View {
     @Environment(\.data) private var data
     @Environment(\.stringTable) private var stringTable
+    @Environment(\.urlParameters) private var urlParameters
     @Environment(\.userInfo) private var userInfo
     
     var text: JudoModel.Text
@@ -27,7 +28,7 @@ struct TextView: View {
     var body: some View {
         let textString = stringTable.resolve(key: text.text)
         
-        if let textValue = textString.evaluatingExpressions(data: data, userInfo: userInfo) {
+        if let textValue = textString.evaluatingExpressions(data: data, urlParameters: urlParameters, userInfo: userInfo) {
             RealizeColor(self.text.textColor) { textColor in
                 SwiftUI.Text(transformed(textValue))
                     .modifier(

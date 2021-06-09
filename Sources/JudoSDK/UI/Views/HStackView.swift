@@ -19,28 +19,11 @@ import JudoModel
 @available(iOS 13.0, *)
 struct HStackView: View {
     var stack: JudoModel.HStack
-    var useLazy: Bool = false
     
     var body: some View {
-        if useLazy  {
-            if #available(iOS 14.0, *) {
-                SwiftUI.LazyHStack(alignment: stack.alignment, spacing: stack.spacing) {
-                    ForEach(orderedLayers) {
-                        LayerView(layer: $0)
-                    }
-                }
-            } else {
-                SwiftUI.HStack(alignment: stack.alignment, spacing: stack.spacing) {
-                    ForEach(orderedLayers) {
-                        LayerView(layer: $0)
-                    }
-                }.frame(maxHeight: .infinity, alignment: .center)
-            }
-        } else {
-            SwiftUI.HStack(alignment: stack.alignment, spacing: stack.spacing) {
-                ForEach(orderedLayers) {
-                    LayerView(layer: $0)
-                }
+        SwiftUI.HStack(alignment: stack.alignment, spacing: stack.spacing) {
+            ForEach(orderedLayers) {
+                LayerView(layer: $0)
             }
         }
     }

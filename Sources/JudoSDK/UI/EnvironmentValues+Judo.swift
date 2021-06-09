@@ -60,12 +60,17 @@ internal struct ExperienceViewControllerKey: EnvironmentKey {
 
 @available(iOS 13.0, *)
 internal struct DataKey: EnvironmentKey {
-    static let defaultValue: JSONObject? = nil
+    static let defaultValue: Any? = nil
+}
+
+@available(iOS 13.0, *)
+internal struct URLParametersKey: EnvironmentKey {
+    static let defaultValue: [String: String] = [:]
 }
 
 @available(iOS 13.0, *)
 internal struct UserInfoKey: EnvironmentKey {
-    static let defaultValue: UserInfo = [:]
+    static let defaultValue: [String: String] = [:]
 }
 
 @available(iOS 13.0, *)
@@ -140,7 +145,7 @@ internal extension EnvironmentValues {
         }
     }
     
-    var data: JSONObject? {
+    var data: Any? {
         get {
             return self[DataKey.self]
         }
@@ -150,7 +155,17 @@ internal extension EnvironmentValues {
         }
     }
     
-    var userInfo: UserInfo {
+    var urlParameters: [String: String] {
+        get {
+            return self[URLParametersKey.self]
+        }
+        
+        set {
+            self[URLParametersKey.self] = newValue
+        }
+    }
+    
+    var userInfo: [String: String] {
         get {
             return self[UserInfoKey.self]
         }

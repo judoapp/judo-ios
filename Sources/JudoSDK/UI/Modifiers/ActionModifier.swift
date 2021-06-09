@@ -27,13 +27,14 @@ struct ActionModifier: ViewModifier {
     @Environment(\.experienceViewController) private var experienceViewController
     @Environment(\.screenViewController) private var screenViewController
     @Environment(\.data) private var data
+    @Environment(\.urlParameters) private var urlParameters
     @Environment(\.userInfo) private var userInfo
     
     @ViewBuilder
     func body(content: Content) -> some View {
         if let action = layer.action, let experience = experience, let screen = screen, let experienceViewController = experienceViewController, let screenViewController = screenViewController {
             Button {
-                action.handle(experience: experience, node: layer, screen: screen, data: data, userInfo: userInfo, experienceViewController: experienceViewController, screenViewController: screenViewController)
+                action.handle(experience: experience, node: layer, screen: screen, data: data, urlParameters: urlParameters, userInfo: userInfo, experienceViewController: experienceViewController, screenViewController: screenViewController)
             } label: {
                 content
             }

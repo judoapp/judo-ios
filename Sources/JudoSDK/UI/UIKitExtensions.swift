@@ -83,9 +83,9 @@ extension UINavigationBar {
 
 @available(iOS 13.0, *)
 extension UINavigationItem {
-    func configure(navBar: NavBar, stringTable: StringTable, data: JSONObject?, userInfo: UserInfo, traits: UITraitCollection, buttonHandler: @escaping (NavBarButton) -> Void) {
+    func configure(navBar: NavBar, stringTable: StringTable, data: Any?, urlParameters: [String: String], userInfo: [String: String], traits: UITraitCollection, buttonHandler: @escaping (NavBarButton) -> Void) {
 
-        title = stringTable.resolve(key: navBar.title).evaluatingExpressions(data: data, userInfo: userInfo)
+        title = stringTable.resolve(key: navBar.title).evaluatingExpressions(data: data, urlParameters: urlParameters, userInfo: userInfo)
 
         hidesBackButton = navBar.hidesBackButton
 
@@ -102,7 +102,7 @@ extension UINavigationItem {
             .compactMap { $0 as? NavBarButton }
             .filter { $0.placement == .leading }
             .map { navBarButton in
-                UIBarButtonItem(navBarButton: navBarButton, stringTable: stringTable, data: data, userInfo: userInfo) {
+                UIBarButtonItem(navBarButton: navBarButton, stringTable: stringTable, data: data, urlParameters: urlParameters, userInfo: userInfo) {
                     buttonHandler(navBarButton)
                 }
             }
@@ -111,7 +111,7 @@ extension UINavigationItem {
             .compactMap { $0 as? NavBarButton }
             .filter { $0.placement == .trailing }
             .map { navBarButton in
-                UIBarButtonItem(navBarButton: navBarButton, stringTable: stringTable, data: data, userInfo: userInfo) {
+                UIBarButtonItem(navBarButton: navBarButton, stringTable: stringTable, data: data, urlParameters: urlParameters, userInfo: userInfo) {
                     buttonHandler(navBarButton)
                 }
             }
@@ -236,7 +236,7 @@ private extension UIBarButtonItem {
         }
     }
 
-    convenience init(navBarButton: NavBarButton, stringTable: StringTable, data: JSONObject?, userInfo: UserInfo, onTap: @escaping () -> Void) {
+    convenience init(navBarButton: NavBarButton, stringTable: StringTable, data: Any?, urlParameters: [String: String], userInfo: [String: String], onTap: @escaping () -> Void) {
         switch navBarButton.style {
         case .close:
             self.init(
@@ -260,7 +260,7 @@ private extension UIBarButtonItem {
                 )
             } else {
                 self.init(
-                    title: navBarButton.title.flatMap { stringTable.resolve(key: $0).evaluatingExpressions(data: data, userInfo: userInfo) },
+                    title: navBarButton.title.flatMap { stringTable.resolve(key: $0).evaluatingExpressions(data: data, urlParameters: urlParameters, userInfo: userInfo) },
                     style: .plain,
                     target: nil,
                     action: nil

@@ -14,10 +14,10 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 public struct Metadata: Codable, Hashable {
-    public var properties: UserInfo = [:]
+    public var properties: [String: String] = [:]
     public var tags: Set<String> = []
     
-    public init(properties: UserInfo = [:], tags: Set<String> = []) {
+    public init(properties: [String: String] = [:], tags: Set<String> = []) {
         self.properties = properties
         self.tags = tags
     }

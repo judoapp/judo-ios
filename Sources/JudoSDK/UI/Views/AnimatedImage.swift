@@ -14,5 +14,30 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import Foundation
+import SwiftUI
+import Combine
 
-public typealias UserInfo = [String: String]
+@available(iOS 13.0, *)
+struct AnimatedImage: View {
+    @State private var frameIndex = 0
+
+    private let timer: Publishers.Autoconnect<Timer.TimerPublisher>
+    private let images: [UIImage]
+
+    init(uiImage image: UIImage) {
+        self.images = image.images ?? [image]
+        self.timer = Timer.publish(every: image.duration / Double(images.count), on: .main, in: .common).autoconnect()
+    }
+
+    var body: some View {
+        Image(uiImage: images[frameIndex])
+            .resizable()
+            .onReceive(timer) { _ in
+                if frameIndex + 1 < images.count {
+                    frameIndex += 1
+                } else {
+                    frameIndex = 0
+                }
+            }
+    }
+}

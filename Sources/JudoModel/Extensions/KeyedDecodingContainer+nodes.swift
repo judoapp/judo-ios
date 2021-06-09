@@ -62,10 +62,12 @@ private struct NodeWrapper: Decodable {
             node = try NavBar(from: decoder)
         case NavBarButton.typeName:
             node = try NavBarButton(from: decoder)
-        case Collection.typeName:
-            node = try Collection(from: decoder)
         case DataSource.typeName:
             node = try DataSource(from: decoder)
+        case Collection.typeName:
+            node = try Collection(from: decoder)
+        case Conditional.typeName:
+            node = try Conditional(from: decoder)
         case HStack.typeName:
             node = try HStack(from: decoder)
         case Image.typeName:

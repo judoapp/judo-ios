@@ -21,16 +21,18 @@ import Combine
 open class ScreenViewController: UIViewController, UIScrollViewDelegate {
     let experience: Experience
     let screen: Screen
-    let data: JSONObject?
-    let userInfo: UserInfo
+    let data: Any?
+    let urlParameters: [String: String]
+    let userInfo: [String: String]
         
-    private var carouselState = CarouselState()
+    private let carouselState = CarouselState()
     private var cancellables: Set<AnyCancellable> = []
     
-    public init(experience: Experience, screen: Screen, data: JSONObject? = nil, userInfo: UserInfo) {
+    public init(experience: Experience, screen: Screen, data: Any? = nil, urlParameters: [String: String], userInfo: [String: String]) {
         self.experience = experience
         self.screen = screen
         self.data = data
+        self.urlParameters = urlParameters
         self.userInfo = userInfo
         super.init(nibName: nil, bundle: nil)
         super.restorationIdentifier = screen.id
@@ -126,6 +128,7 @@ open class ScreenViewController: UIViewController, UIScrollViewDelegate {
                 navBar: navBar,
                 stringTable: experience.localization,
                 data: data,
+                urlParameters: urlParameters,
                 userInfo: userInfo,
                 traits: traitCollection,
                 buttonHandler: navBarButtonTapped
@@ -174,6 +177,7 @@ open class ScreenViewController: UIViewController, UIScrollViewDelegate {
                 node: navBarButton,
                 screen: screen,
                 data: data,
+                urlParameters: urlParameters,
                 userInfo: userInfo,
                 experienceViewController: experienceViewController,
                 screenViewController: self
@@ -268,6 +272,7 @@ open class ScreenViewController: UIViewController, UIScrollViewDelegate {
     private func _viewForLayer(_ layer: Layer) -> some View {
         SwiftUI.ZStack {
             LayerView(layer: layer)
+                .environmentObject(carouselState)
                 .environment(\.presentAction, { [weak self] viewController in
                     self?.present(viewController, animated: true)
                 })
@@ -276,10 +281,10 @@ open class ScreenViewController: UIViewController, UIScrollViewDelegate {
                 })
                 .environment(\.screenViewController, self)
                 .environment(\.experienceViewController, experienceViewController)
-                .environmentObject(carouselState)
                 .environment(\.experience, experience)
                 .environment(\.screen, screen)
                 .environment(\.stringTable, experience.localization)
+                .environment(\.urlParameters, urlParameters)
                 .environment(\.userInfo, userInfo)
         }
     }

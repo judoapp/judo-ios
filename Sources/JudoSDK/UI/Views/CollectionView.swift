@@ -19,10 +19,12 @@ import SwiftUI
 @available(iOS 13.0, *)
 struct CollectionView: View {
     @Environment(\.data) private var data
+    @Environment(\.urlParameters) private var urlParameters
+    @Environment(\.userInfo) private var userInfo
     var collection: Collection
 
     var body: some View {
-        if let items = items, !items.isEmpty {
+        if let items = items {
             ForEach(Array(zip(items.indices, items)), id: \.0) { index, item in
                 ForEach(collection.children.compactMap { $0 as? Layer }) {
                     LayerView(layer: $0)
@@ -30,63 +32,42 @@ struct CollectionView: View {
                 .environment(\.data, item)
                 .contentShape(SwiftUI.Rectangle())
             }
-        } else {
-            // Work around a bug in LazyVStack where initially empty contents cause it to never render anything that appears later (such as asynchronously loaded data from a Collection).
-            SwiftUI.Rectangle().fill(Color.clear).frame(width: 1, height: 1)
         }
     }
     
-    private var items: [JSONObject]? {
-        let tokens = collection.dataKey.split(separator: ".").map { String($0) }
-        let value = tokens.reduce(data as Any?) { result, token in
-            if let result = result as? JSONObject {
-                return result[token]
-            } else {
-                return nil
-            }
-        }
-        
-        guard var result = value as? [JSONObject] else {
+    private var items: [Any]? {
+        guard var result = JSONSerialization.value(forKeyPath: collection.keyPath, data: data, urlParameters: urlParameters, userInfo: userInfo) as? [Any] else {
             return nil
         }
         
-        collection.filters.forEach { filter in
+        collection.filters.forEach { condition in
             result = result.filter { data in
-                switch (filter.predicate, data[filter.dataKey], filter.value) {
-                case (.equals, let a as String, let b as String):
-                    return a == b
-                case (.equals, let a as Double, let b as Double):
-                    return a == b
-                case (.doesNotEqual, let a as String, let b as String):
-                    return a != b
-                case (.doesNotEqual, let a as Double, let b as Double):
-                    return a != b
-                case (.isGreaterThan, let a as Double, let b as Double):
-                    return a > b
-                case (.isLessThan, let a as Double, let b as Double):
-                    return a < b
-                case (.isSet, .some, _):
-                    return true
-                case (.isSet, .none, _):
-                    return false
-                case (.isNotSet, .some, _):
-                    return false
-                case (.isNotSet, .none, _):
-                    return true
-                case (.isTrue, let value as Bool, _):
-                    return value == true
-                case (.isFalse, let value as Bool, _):
-                    return value == false
-                default:
-                    return true
-                }
+                condition.isSatisfied(
+                    data: data,
+                    urlParameters: urlParameters,
+                    userInfo: userInfo
+                )
             }
         }
         
         if !collection.sortDescriptors.isEmpty {
             result.sort { a, b in
                 for descriptor in collection.sortDescriptors {
-                    switch (a[descriptor.dataKey], b[descriptor.dataKey]) {
+                    let a = JSONSerialization.value(
+                        forKeyPath: descriptor.keyPath,
+                        data: a,
+                        urlParameters: urlParameters,
+                        userInfo: userInfo
+                    )
+                    
+                    let b = JSONSerialization.value(
+                        forKeyPath: descriptor.keyPath,
+                        data: b,
+                        urlParameters: urlParameters,
+                        userInfo: userInfo
+                    )
+                    
+                    switch (a, b) {
                     case (let a as String, let b as String) where a != b:
                         return descriptor.ascending ? a < b : a > b
                     case (let a as Double, let b as Double) where a != b:

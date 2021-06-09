@@ -13,18 +13,33 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-import Foundation
 import JudoModel
+import Combine
+import Foundation
 
-extension URLRequest {
-    @available(iOS 13.0, *)
-    init(url: URL, httpMethod: DataSource.HTTPMethod, httpBody: String?, headers: [DataSource.Header]) {
-        self.init(url: url)
-        self.httpMethod = httpMethod.rawValue
-        self.httpBody = httpBody?.data(using: .utf8)
-        
-        headers.forEach {
-            addValue($0.value, forHTTPHeaderField: $0.key)
-        }
+@available(iOS 13.0, *)
+extension URLSession {
+    func dataPublisher(for request: URLRequest) -> AnyPublisher<Result<Any?, Error>, Never> {
+        dataTaskPublisher(for: request)
+            .retry(1)
+            .tryMap { element -> Data in
+                guard let httpResponse = element.response as? HTTPURLResponse,
+                      httpResponse.statusCode == 200 else {
+                    throw URLError(.badServerResponse)
+                }
+
+                return element.data
+            }
+            .tryMap { data in
+                try JSONSerialization.jsonObject(with: data)
+            }
+            .map { data in
+                .success(data)
+            }
+            .catch { error in
+                Just(.failure(error)).eraseToAnyPublisher()
+            }
+            .receive(on: RunLoop.main)
+            .eraseToAnyPublisher()
     }
 }

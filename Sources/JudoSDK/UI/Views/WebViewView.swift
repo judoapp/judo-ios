@@ -21,6 +21,7 @@ import JudoModel
 struct WebViewView: View {
     @Environment(\.data) private var data
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.urlParameters) private var urlParameters
     @Environment(\.userInfo) private var userInfo
     
     var webView: WebView
@@ -28,7 +29,7 @@ struct WebViewView: View {
     @State private var loadErrorMessage: String?
 
     var body: some View {
-        if let urlString = webView.url.evaluatingExpressions(data: data, userInfo: userInfo), let resolvedURL = URL(string: urlString) {
+        if let urlString = webView.url.evaluatingExpressions(data: data, urlParameters: urlParameters, userInfo: userInfo), let resolvedURL = URL(string: urlString) {
             if let message = loadErrorMessage {
                 webViewUI(resolvedURL: resolvedURL).loadError(message: message)
             } else {

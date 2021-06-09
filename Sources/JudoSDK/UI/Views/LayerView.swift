@@ -62,6 +62,8 @@ struct LayerView: View {
             DataSourceView(dataSource: dataSource)
         case let collection as JudoModel.Collection:
             CollectionView(collection: collection)
+        case let conditional as JudoModel.Conditional:
+            ConditionalView(conditional: conditional)
         default:
             EmptyView()
         }

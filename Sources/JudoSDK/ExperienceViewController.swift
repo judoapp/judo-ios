@@ -21,14 +21,17 @@ import os.log
 ///
 /// - Tag: ExperienceViewController
 open class ExperienceViewController: UIViewController {
-
     /// Initialize ExperienceViewController for an Experience URL.
     /// - Parameters:
     ///   - url: Experience URL
     ///   - ignoreCache: Optional. Ignore cached Experience, if any.
-    public init(url: URL, ignoreCache: Bool = false) {
+    ///   - userInfo: Optional properties about the current user which can be used to personalize the experience.
+    public init(url: URL, userInfo: [String: String] = [:], ignoreCache: Bool = false) {
         super.init(nibName: nil, bundle: nil)
-        setExperience(url: url, ignoreCache: ignoreCache)
+        
+        if #available(iOS 13.0, *), let fetchRequest = FetchRequest(url: url, ignoreCache: ignoreCache, userInfo: userInfo) {
+            fetchExperience(request: fetchRequest)
+        }
     }
     
     /// Initialize ExperienceViewController for an Experience URL, for use with a Segue Outlet in a Storyboard.
@@ -36,19 +39,36 @@ open class ExperienceViewController: UIViewController {
     ///   - url: Experience URL
     ///   - coder: An NSCoder
     ///   - ignoreCache: Optional. Ignore cached Experience, if any.
-    public init?(url: URL, coder: NSCoder, ignoreCache: Bool = false) {
+    ///   - userInfo: Optional properties about the current user which can be used to personalize the experience.
+    public init?(url: URL, coder: NSCoder, userInfo: [String: String] = [:], ignoreCache: Bool = false) {
         super.init(coder: coder)
-        setExperience(url: url, ignoreCache: ignoreCache)
+        
+        if #available(iOS 13.0, *), let fetchRequest = FetchRequest(url: url, ignoreCache: ignoreCache, userInfo: userInfo) {
+            fetchExperience(request: fetchRequest)
+        }
     }
     
     /// Initialize Experience View Controller with a `Experience`
     /// - Parameters:
     ///   - experience: `Experience` instance
     ///   - screenID: Optional. Override experience's initial screen identifier.
+    ///   - urlParameters: Optional parameters from the URL used to launch the experience.
+    ///   - userInfo: Optional properties about the current user which can be used to personalize the experience.
     @available(iOS 13.0, *)
-    public init(experience: Experience, screenID initialScreenID: Screen.ID? = nil) {
+    public init(
+        experience: Experience,
+        screenID initialScreenID: Screen.ID? = nil,
+        urlParameters: [String: String] = [:],
+        userInfo: [String: String] = [:]
+    ) {
         super.init(nibName: nil, bundle: nil)
-        loadExperience(experience: experience, initialScreenID: initialScreenID ?? experience.initialScreenID)
+        let context = LaunchContext(
+            initialScreenID: initialScreenID,
+            urlParameters: urlParameters,
+            userInfo: userInfo
+        )
+        
+        presentExperience(experience: experience, context: context)
     }
     
     /// Initialize Experience View Controller with a `Experience`, for use with a Segue Outlet in a Storyboard.
@@ -56,59 +76,31 @@ open class ExperienceViewController: UIViewController {
     ///   - experience: `Experience` instance
     ///   - coder: An NSCoder
     ///   - screenID: Optional. Override experience's initial screen identifier.
+    ///   - urlParameters: Optional parameters from the URL used to launch the experience.
+    ///   - userInfo: Optional properties about the current user which can be used to personalize the experience.
     @available(iOS 13.0, *)
-    public init?(experience: Experience, coder: NSCoder, screenID initialScreenID: Screen.ID? = nil) {
+    public init?(experience: Experience, coder: NSCoder, screenID initialScreenID: Screen.ID? = nil, urlParameters: [String: String] = [:], userInfo: [String: String] = [:]) {
         super.init(coder: coder)
-        loadExperience(experience: experience, initialScreenID: initialScreenID ?? experience.initialScreenID)
+        
+        let context = LaunchContext(
+            initialScreenID: initialScreenID,
+            urlParameters: urlParameters,
+            userInfo: userInfo
+        )
+        
+        presentExperience(experience: experience, context: context)
     }
     
     required public init?(coder: NSCoder) {
         fatalError("ExperienceViewController is supported directly in Interface Builder or Storyboards, instead use a Segue outlet factory method with init?(url:coder:ignoreCache)")
     }
     
-    private func setExperience(url: URL, ignoreCache: Bool = false) {
-        guard #available(iOS 13.0, *) else {
-            return
-        }
-        
-        var experienceURL: URL = url
-        var requestedInitialScreenID: Screen.ID? = nil
-        if var urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false),
-           let screenID = urlComponents.queryItems?.first(where: { $0.name.uppercased() == "screenID".uppercased() })?.value
-        {
-            requestedInitialScreenID = screenID
-            
-            urlComponents.query = nil
-            experienceURL = urlComponents.url!
-        }
-        
-        if !ignoreCache, let experience = Judo.sharedInstance.urlCache.cachedExperience(url: experienceURL) {
-            loadExperience(experience: experience, initialScreenID: requestedInitialScreenID ?? experience.initialScreenID)
-            return
-        }
-        
-        retrieveExperience(url: experienceURL, ignoreCache: ignoreCache, initialScreenID: requestedInitialScreenID)
+    open override var childForStatusBarStyle: UIViewController? {
+        children.first
     }
-    
-    @available(iOS 13.0, *)
-    private func retrieveExperience(url: URL, ignoreCache: Bool = false, initialScreenID: Screen.ID?) {
-        // TODO: needs visual async state while waiting for loading.
-        Judo.sharedInstance.repository.retrieveExperience(url: url, ignoreCache: ignoreCache) { result in
-            switch result {
-            case .failure(let error):
-                judo_log(.error, "Error while trying to launch Experience: %@", error.debugDescription)
-                
-                if let recoverableError = error as? RecoverableError, recoverableError.canRecover {
-                    self.presentRetrieveRetryDialog() {
-                        self.retrieveExperience(url: url, initialScreenID: initialScreenID)
-                    }
-                } else {
-                    self.presentRetrieveErrorDialog()
-                }
-            case .success(let experience):
-                self.loadExperience(experience: experience, initialScreenID: initialScreenID ?? experience.initialScreenID)
-            }
-        }
+
+    open override var childForStatusBarHidden: UIViewController? {
+        children.first
     }
     
     open override func loadView() {
@@ -148,19 +140,80 @@ open class ExperienceViewController: UIViewController {
         }
     }
     
-    /// This method yields the user info hash ([String: String]) that is made available for interpolation into Experience content.
-    ///
-    /// The default implementation of this method calls a settable closure `Judo.sharedInstance.userInfo()`, which is an easier way to provide custom user info to Experiences without needing to override ScreenViewController.  For more customized integrations that call for customized user info on an Experience basis, override this method.
-    open var userInfo: UserInfo {
-        return Judo.sharedInstance.userInfo()
-    }
-    
     @objc func closeButtonTapped() {
         dismiss(animated: true, completion: nil)
     }
     
+    // MARK: Fetch and Present
+    
     @available(iOS 13.0, *)
-    private func loadExperience(experience: Experience, initialScreenID: Screen.ID) {
+    private struct FetchRequest {
+        var url: URL
+        var ignoreCache: Bool
+        var launchContext = LaunchContext()
+        
+        init?(url: URL, ignoreCache: Bool, userInfo: [String: String]) {
+            guard var urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+                return nil
+            }
+            
+            let queryItems = urlComponents.queryItems
+            urlComponents.query = nil
+            self.url = urlComponents.url!
+            self.ignoreCache = ignoreCache
+            
+            queryItems?.forEach { queryItem in
+                if queryItem.name.uppercased() == "screenID".uppercased() {
+                    launchContext.initialScreenID = queryItem.value
+                } else {
+                    launchContext.urlParameters[queryItem.name] = queryItem.value
+                }
+            }
+        }
+    }
+    
+    @available(iOS 13.0, *)
+    private struct LaunchContext {
+        var initialScreenID: Screen.ID?
+        var urlParameters = [String: String]()
+        var userInfo = [String: String]()
+    }
+    
+    @available(iOS 13.0, *)
+    private func fetchExperience(request: FetchRequest) {
+        if !request.ignoreCache, let experience = Judo.sharedInstance.urlCache.cachedExperience(url: request.url) {
+            presentExperience(
+                experience: experience,
+                context: request.launchContext
+            )
+        } else {
+            // TODO: needs visual async state while waiting for loading.
+            Judo.sharedInstance.repository.retrieveExperience(url: request.url, ignoreCache: request.ignoreCache) { result in
+                switch result {
+                case .failure(let error):
+                    judo_log(.error, "Error while trying to launch Experience: %@", error.debugDescription)
+                    
+                    if let recoverableError = error as? RecoverableError, recoverableError.canRecover {
+                        self.presentRetrieveRetryDialog() {
+                            self.fetchExperience(request: request)
+                        }
+                    } else {
+                        self.presentRetrieveErrorDialog()
+                    }
+                case .success(let experience):
+                    self.presentExperience(
+                        experience: experience,
+                        context: request.launchContext
+                    )
+                }
+            }
+        }
+    }
+    
+    @available(iOS 13.0, *)
+    private func presentExperience(experience: Experience, context: LaunchContext) {
+        let initialScreenID = context.initialScreenID ?? experience.initialScreenID
+        
         // determine which root container is on the path to the initial screen:
         let matchingScreen = experience.nodes.first(where: { $0.id == initialScreenID }) as? Screen
         
@@ -180,7 +233,13 @@ open class ExperienceViewController: UIViewController {
             }
         }
 
-        let navViewController = Judo.sharedInstance.navBarViewController(experience, initialScreen, nil, userInfo)
+        let navViewController = Judo.sharedInstance.navBarViewController(
+            experience,
+            initialScreen,
+            nil,
+            context.urlParameters,
+            context.userInfo
+        )
         
         self.restorationIdentifier = "\(experience.id)"
         self.setChildViewController(navViewController)
@@ -285,14 +344,6 @@ open class ExperienceViewController: UIViewController {
         childViewController.view.frame = view.bounds
         view.addSubview(childViewController.view)
         childViewController.didMove(toParent: self)
-    }
-
-    open override var childForStatusBarStyle: UIViewController? {
-        children.first
-    }
-
-    open override var childForStatusBarHidden: UIViewController? {
-        children.first
     }
 }
 

@@ -20,7 +20,7 @@ import os.log
 
 @available(iOS 13.0, *)
 extension Action {
-    func handle(experience: Experience, node: Node, screen: Screen, data: JSONObject?, userInfo: UserInfo, experienceViewController: ExperienceViewController, screenViewController: ScreenViewController) {
+    func handle(experience: Experience, node: Node, screen: Screen, data: Any?, urlParameters: [String: String], userInfo: [String: String], experienceViewController: ExperienceViewController, screenViewController: ScreenViewController) {
                         
         NotificationCenter.default.post(
             name: Judo.didReceiveActionNotification,
@@ -43,7 +43,7 @@ extension Action {
             
             switch segueStyle {
             case .modal:
-                let viewController = Judo.sharedInstance.navBarViewController(experience, screen, data, userInfo)
+                let viewController = Judo.sharedInstance.navBarViewController(experience, screen, data, urlParameters, userInfo)
                 switch modalPresentationStyle {
                 case .sheet:
                     viewController.modalPresentationStyle = .pageSheet
@@ -55,11 +55,11 @@ extension Action {
                 
                 screenViewController.present(viewController, animated: true)
             default:
-                let viewController = Judo.sharedInstance.screenViewController(experience, screen, data, userInfo)
+                let viewController = Judo.sharedInstance.screenViewController(experience, screen, data, urlParameters, userInfo)
                 screenViewController.show(viewController, sender: screenViewController)
             }
         case .openURL:
-            guard let resolvedURLString = self.url?.evaluatingExpressions(data: data, userInfo: userInfo), let resolvedURL = URL(string: resolvedURLString) else {
+            guard let resolvedURLString = self.url?.evaluatingExpressions(data: data, urlParameters: urlParameters, userInfo: userInfo), let resolvedURL = URL(string: resolvedURLString) else {
                 return
             }
             
@@ -79,7 +79,7 @@ extension Action {
                 }
             }
         case .presentWebsite:
-            guard let resolvedURLString = self.url?.evaluatingExpressions(data: data, userInfo: userInfo), let resolvedURL = URL(string: resolvedURLString) else {
+            guard let resolvedURLString = self.url?.evaluatingExpressions(data: data, urlParameters: urlParameters, userInfo: userInfo), let resolvedURL = URL(string: resolvedURLString) else {
                 return
             }
             

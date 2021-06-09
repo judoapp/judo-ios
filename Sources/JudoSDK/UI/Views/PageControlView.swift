@@ -18,7 +18,7 @@ import JudoModel
 
 @available(iOS 13.0, *)
 struct PageControlView: View {
-    var pageControl: PageControl
+    let pageControl: PageControl
     
     @EnvironmentObject private var carouselState: CarouselState
     @Environment(\.data) private var data
@@ -150,6 +150,7 @@ struct PageControlView: View {
 private struct PageControlViewBody: UIViewRepresentable {
     @Environment(\.data) private var data
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.urlParameters) private var urlParameters
     @Environment(\.userInfo) private var userInfo
     private var numberOfPages: Int
     @Binding private var currentPage: Int
@@ -188,16 +189,15 @@ private struct PageControlViewBody: UIViewRepresentable {
     }
 
     func updateUIView(_ pageControl: UIPageControl, context: Context) {
-        images.fetchImages(data: data, colorScheme: colorScheme, userInfo: userInfo)
-        
-        pageControl.currentPage = currentPage
-        pageControl.pageIndicatorTintColor = normalColor
-        pageControl.currentPageIndicatorTintColor = currentColor
+        images.fetchImages(data: data, colorScheme: colorScheme, urlParameters: urlParameters, userInfo: userInfo)
+
+        // Store current value. currentPage is a binding and it's value may change.
+        let currentPageValue = currentPage
 
         if #available(iOS 14.0, *) {
             for page in 0..<pageControl.numberOfPages {
                 let image: UIImage?
-                if page == currentPage {
+                if page == currentPageValue {
                     image = images.currentUIImage
                 } else {
                     image = images.normalUIImage
@@ -208,6 +208,10 @@ private struct PageControlViewBody: UIViewRepresentable {
                 }
             }
         }
+
+        pageControl.currentPage = currentPageValue
+        pageControl.pageIndicatorTintColor = normalColor
+        pageControl.currentPageIndicatorTintColor = currentColor
     }
 
     final class Coordinator: NSObject, ObservableObject {
@@ -231,9 +235,10 @@ private final class Images: ObservableObject {
     private let normalImage: JudoModel.Image?
     private let currentImage: JudoModel.Image?
     
-    private var data: JSONObject?
+    private var data: Any?
     private var colorScheme: ColorScheme?
-    private var userInfo: UserInfo = [:]
+    private var urlParameters: [String: String] = [:]
+    private var userInfo: [String: String] = [:]
 
     @Published var normalUIImage: UIImage?
     @Published var currentUIImage: UIImage?
@@ -243,13 +248,14 @@ private final class Images: ObservableObject {
         self.currentImage = currentImage
     }
 
-    func fetchImages(data: JSONObject?, colorScheme: ColorScheme, userInfo: UserInfo) {
-        guard self.data != data || self.colorScheme != colorScheme || self.userInfo != userInfo else {
+    func fetchImages(data: Any?, colorScheme: ColorScheme, urlParameters: [String: String], userInfo: [String: String]) {
+        guard self.colorScheme != colorScheme || self.urlParameters != urlParameters, self.userInfo != userInfo else {
             return
         }
-        
+
         self.data = data
         self.colorScheme = colorScheme
+        self.urlParameters = urlParameters
         self.userInfo = userInfo
                 
         if let normalImage = normalImage {
@@ -267,7 +273,7 @@ private final class Images: ObservableObject {
 
     private func fetch(image: JudoModel.Image, completion: @escaping (UIImage) -> Void) {
         let scale = self.scale(for: image)
-        if let urlString = urlString(for: image)?.evaluatingExpressions(data: data, userInfo: userInfo), let resolvedURL = URL(string: urlString)  {
+        if let urlString = urlString(for: image)?.evaluatingExpressions(data: data, urlParameters: urlParameters, userInfo: userInfo), let resolvedURL = URL(string: urlString)  {
             fetchImage(url: resolvedURL) { uiImage in
                 DispatchQueue.main.async {
                     completion(UIImage.scale(image: uiImage, by: scale))

@@ -21,12 +21,13 @@ import SwiftUI
 struct DataSourceView: View {
     var dataSource: JudoModel.DataSource
     @Environment(\.data) private var parentData
+    @Environment(\.urlParameters) private var urlParameters
     @Environment(\.userInfo) private var userInfo
     
     @State private var cancellables: Set<AnyCancellable> = []
 
     // Fetched data
-    @State private var fetchedData: JSONObject?
+    @State private var fetchedData: Any??
 
     @ViewBuilder
     var body: some View {
@@ -55,21 +56,29 @@ struct DataSourceView: View {
         }
     }
     
-    private var publisher: AnyPublisher<Result<JSONObject, Error>, Never> {
-        guard let urlString = dataSource.url.evaluatingExpressions(data: parentData, userInfo: userInfo), let url = URL(string: urlString) else {
+    private var publisher: AnyPublisher<Result<Any?, Error>, Never> {
+        guard let urlString = dataSource.url.evaluatingExpressions(data: parentData, urlParameters: urlParameters, userInfo: userInfo), let url = URL(string: urlString) else {
             return Just(Result.failure(UnableToInterpolateDataSourceURLError())).eraseToAnyPublisher()
         }
         
-        let request = URLRequest(
-            url: url,
-            httpMethod: dataSource.httpMethod,
-            httpBody: dataSource.httpBody,
-            headers: dataSource.headers
-        )
+        var request = URLRequest(url: url)
+        request.httpMethod = dataSource.httpMethod.rawValue
         
-        return URLSession.shared.dataPublisher(
-            for: request
-        )
+        request.httpBody = dataSource.httpBody?
+            .evaluatingExpressions(data: parentData, urlParameters: urlParameters, userInfo: userInfo)?
+            .data(using: .utf8)
+        
+        request.allHTTPHeaderFields = dataSource.headers.reduce(nil) { result, header in
+            guard let value = header.value.evaluatingExpressions(data: parentData, urlParameters: urlParameters, userInfo: userInfo) else {
+                return result
+            }
+                
+            var nextResult = result ?? [:]
+            nextResult[header.key] = value
+            return nextResult
+        }
+        
+        return URLSession.shared.dataPublisher(for: request)
     }
     
     private var layers: [Layer] {

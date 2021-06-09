@@ -126,6 +126,7 @@ private extension Data {
             guard let uiImage = UIImage(data: self, scale: 1.0) else {
                 return nil
             }
+
             return uiImage
         }
 
@@ -134,7 +135,8 @@ private extension Data {
 
         for imageIdx in 0..<CGImageSourceGetCount(imageSource) {
             if let cgImage = CGImageSourceCreateImageAtIndex(imageSource, imageIdx, nil) {
-                images.append(UIImage(cgImage: cgImage, scale: 1.0, orientation: .up))
+                let image = UIImage(cgImage: cgImage, scale: 1.0, orientation: .up)
+                images.append(image)
                 duration += imageSource.gifAnimationDelay(imageAtIndex: imageIdx)
             }
         }

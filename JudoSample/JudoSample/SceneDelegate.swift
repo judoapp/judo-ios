@@ -22,43 +22,32 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
     
+    // Properties of the current user. These can be passed to the
+    // `ExperienceViewController` to personalize the content in the experience.
+    let exampleUserInfo = [
+            "userID": "80000516109",
+            "firstName": "John",
+            "avatar": "https://reqres.in/img/faces/1-image.jpg",
+            "pointsBalance": "54,231",
+            "subscription": "Premium",
+            "memberSince": "2020-07-05T04:04:00Z"
+    ]
+    
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
-
-        // handle universal links.
-        if let userActivity = connectionOptions.userActivities.first,
-           userActivity.activityType == NSUserActivityTypeBrowsingWeb,
-           let incomingURL = userActivity.webpageURL,
-           let components = NSURLComponents(url: incomingURL, resolvingAgainstBaseURL: true),
-           components.host == "myapp.judo.app" {
+        if let experienceURL = Judo.sharedInstance.experienceURL(from: connectionOptions) {
+            let vc = ExperienceViewController(url: experienceURL, userInfo: exampleUserInfo)
             
-            // open the Experience:
-            let experienceViewController = ExperienceViewController(url: incomingURL)
             // present on top of the view controller you already have configured (eg. in a storyboard):
             DispatchQueue.main.async {
-                self.window?.rootViewController?.present(experienceViewController, animated: true)
-            }
-        }
-        
-        // handle deep link (when app starting from cold).
-        if let urlContext = connectionOptions.urlContexts.first, let components = NSURLComponents(url: urlContext.url, resolvingAgainstBaseURL: true), components.scheme == "myapp", components.host == "presentExperience", let experienceURLString = components.queryItems?.first(where: { $0.name == "url" })?.value, let experienceURL = URL(string: experienceURLString) {
-            
-            // open the Experience:
-            let experienceViewController = ExperienceViewController(url: experienceURL)
-            // present on top of the view controller you already have configured (eg. in a storyboard):
-            DispatchQueue.main.async {
-                self.window!.rootViewController!.present(experienceViewController, animated: false)
+                self.window?.rootViewController?.present(vc, animated: false)
             }
         }
     }
     
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
-        // handle deep link if app already open.
-        if let urlContext = URLContexts.first, let components = NSURLComponents(url: urlContext.url, resolvingAgainstBaseURL: true), components.scheme == "myapp", components.host == "presentExperience", let experienceURLString = components.queryItems?.first(where: { $0.name == "url" })?.value, let experienceURL = URL(string: experienceURLString) {
-            
-            let experienceViewController = ExperienceViewController(url: experienceURL)
-            
-            self.window?.rootViewController?.present(experienceViewController, animated: false)
+        if let experienceURL = Judo.sharedInstance.experienceURL(from: URLContexts) {
+            let vc = ExperienceViewController(url: experienceURL, userInfo: exampleUserInfo)
+            self.window?.rootViewController?.present(vc, animated: true)
         }
     }
 }
-

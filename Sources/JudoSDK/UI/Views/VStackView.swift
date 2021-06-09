@@ -19,28 +19,11 @@ import JudoModel
 @available(iOS 13.0, *)
 struct VStackView: View {
     var stack: JudoModel.VStack
-    var useLazy: Bool = false
     
     var body: some View {
-        if useLazy  {
-            if #available(iOS 14.0, *) {
-                SwiftUI.LazyVStack(alignment: stack.alignment, spacing: stack.spacing) {
-                    ForEach(orderedLayers) {
-                        LayerView(layer: $0)
-                    }
-                }
-            } else {
-                SwiftUI.VStack(alignment: stack.alignment, spacing: stack.spacing) {
-                    ForEach(orderedLayers) {
-                        LayerView(layer: $0)
-                    }
-                }.frame(maxWidth: .infinity, alignment: .center)
-            }
-        } else {
-            SwiftUI.VStack(alignment: stack.alignment, spacing: stack.spacing) {
-                ForEach(orderedLayers) {
-                    LayerView(layer: $0)
-                }
+        SwiftUI.VStack(alignment: stack.alignment, spacing: stack.spacing) {
+            ForEach(orderedLayers) {
+                LayerView(layer: $0)
             }
         }
     }

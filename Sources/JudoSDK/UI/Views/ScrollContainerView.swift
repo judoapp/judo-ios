@@ -25,41 +25,15 @@ struct ScrollContainerView: View {
         SwiftUI.ScrollView(axis, showsIndicators: !scrollContainer.disableScrollBar) {
             switch scrollContainer.axis {
             case .horizontal:
-                if scrollContainer.children.count == 1, let stack = scrollContainer.children.first as? JudoModel.HStack {
-                    HStackView(stack: stack, useLazy: true)
-                        .modifier(LayerViewModifier(layer: stack))
-                } else {
-                    if #available(iOS 14.0, *) {
-                        SwiftUI.LazyHStack(spacing: 0) {
-                            ForEach(orderedLayers) {
-                                LayerView(layer: $0)
-                            }
-                        }
-                    } else {
-                        SwiftUI.HStack(spacing: 0) {
-                            ForEach(orderedLayers) {
-                                LayerView(layer: $0)
-                            }
-                        }.frame(maxHeight: .infinity, alignment: .center)
+                SwiftUI.HStack(spacing: 0) {
+                    ForEach(orderedLayers) {
+                        LayerView(layer: $0)
                     }
                 }
             case .vertical:
-                if scrollContainer.children.count == 1, let stack = scrollContainer.children.first as? JudoModel.VStack {
-                    VStackView(stack: stack, useLazy: true)
-                        .modifier(LayerViewModifier(layer: stack))
-                } else {
-                    if #available(iOS 14.0, *) {
-                        SwiftUI.LazyVStack(spacing: 0) {
-                            ForEach(orderedLayers) {
-                                LayerView(layer: $0)
-                            }
-                        }
-                    } else {
-                        SwiftUI.VStack(spacing: 0) {
-                            ForEach(orderedLayers) {
-                                LayerView(layer: $0)
-                            }
-                        }.frame(maxWidth: .infinity, alignment: .center)
+                SwiftUI.VStack(spacing: 0) {
+                    ForEach(orderedLayers) {
+                        LayerView(layer: $0)
                     }
                 }
             }

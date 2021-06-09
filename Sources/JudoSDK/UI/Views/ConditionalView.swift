@@ -13,4 +13,31 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-public typealias JSONObject = [String: AnyHashable]
+import JudoModel
+import SwiftUI
+
+@available(iOS 13.0, *)
+struct ConditionalView: View {
+    @Environment(\.data) private var data
+    @Environment(\.urlParameters) private var urlParameters
+    @Environment(\.userInfo) private var userInfo
+    var conditional: Conditional
+
+    var body: some View {
+        if allConditionsSatisfied {
+            ForEach(conditional.children.compactMap { $0 as? Layer }) {
+                LayerView(layer: $0)
+            }
+        }
+    }
+    
+    private var allConditionsSatisfied: Bool {
+        conditional.conditions.allSatisfy { condition in
+            condition.isSatisfied(
+                data: data,
+                urlParameters: urlParameters,
+                userInfo: userInfo
+            )
+        }
+    }
+}

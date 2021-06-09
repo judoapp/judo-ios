@@ -7,13 +7,14 @@ import Combine
 @available(iOS 13.0, *)
 struct VideoView: View {
     @Environment(\.data) private var data
+    @Environment(\.urlParameters) private var urlParameters
     @Environment(\.userInfo) private var userInfo
 
     let video: JudoModel.Video
     @State private var isVisible = true
 
     var body: some View {
-        if let urlString = video.sourceURL.evaluatingExpressions(data: data, userInfo: userInfo), let sourceURL = URL(string: urlString) {
+        if let urlString = video.sourceURL.evaluatingExpressions(data: data, urlParameters: urlParameters, userInfo: userInfo), let sourceURL = URL(string: urlString) {
             VideoPlayerView(
                 sourceURL: sourceURL,
                 posterImageURL: posterURL,

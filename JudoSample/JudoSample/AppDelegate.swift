@@ -65,18 +65,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             }
         }
         
-        // The `userInfo(_:)` callback allows you to set properties of the current user. These properties can be used to personalize text copy and dynamic URLs within a Judo experience.
-        Judo.sharedInstance.userInfo = {
-            [
-                "userID": "80000516109",
-                "firstName": "John",
-                "avatar": "https://reqres.in/img/faces/1-image.jpg",
-                "pointsBalance": "54,231",
-                "subscription": "Premium",
-                "memberSince": "2020-07-05T04:04:00Z"
-            ]
-        }
-        
         return true
     }
     

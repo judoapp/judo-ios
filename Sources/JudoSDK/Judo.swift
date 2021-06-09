@@ -26,13 +26,6 @@ public final class Judo {
     /// App domain name.
     public let domains: [String]
     
-    /// Set this closure value to a function that will return a dictionary of strings, that correspond to the way User Info is configured in your Experiences. These will be interpolated into your Experiences.
-    ///
-    /// Eg. `userID`, `rewardsProgramPoints`, etc.
-    public var userInfo: (() -> [String: String]) = {
-        [:]
-    }
-    
     /// Obtain the Judo SDK instance (after calling [initialize(accessToken:domain:)](x-source-tag://initialize)).
     public static var sharedInstance: Judo {
         get {
@@ -107,12 +100,12 @@ public final class Judo {
     
     /// To customize the Nav Bar View Controller, replace this function reference with a custom one that instantiates your own NavBarViewController subclass.
     @available(iOS 13.0, *)
-    public lazy var navBarViewController: (_ experience: Experience, _ screen: Screen, _ data: JSONObject?, _ userInfo: UserInfo) -> NavBarViewController =
-        NavBarViewController.init(experience:screen:data:userInfo:)
+    public lazy var navBarViewController: (_ experience: Experience, _ screen: Screen, _ data: Any?, _ urlParameters: [String: String], _ userInfo: [String: String]) -> NavBarViewController =
+        NavBarViewController.init(experience:screen:data:urlParameters:userInfo:)
     
     /// To customize the Screen View Controller, replace this function reference with a custom one that instantiates your own ScreenViewController subclass.
     @available(iOS 13.0, *)
-    public lazy var screenViewController: (_ experience: Experience, _ screen: Screen, _ data: JSONObject?, _ userInfo: UserInfo) -> ScreenViewController = ScreenViewController.init(experience:screen:data:userInfo:)
+    public lazy var screenViewController: (_ experience: Experience, _ screen: Screen, _ data: Any?, _ urlParameters: [String: String], _ userInfo: [String: String]) -> ScreenViewController = ScreenViewController.init(experience:screen:data:urlParameters:userInfo:)
     
     // MARK: Methods
 
@@ -284,6 +277,45 @@ public final class Judo {
             }
         } else {
             judo_log(.debug, "Judo runs in skeleton mode on iOS <13, ignoring background app refresh task registration request.")
+        }
+    }
+    
+    // MARK: URL Conversion Utils
+    
+    @available(iOS 13.0, *)
+    public func experienceURL(from connectionOptions: UIScene.ConnectionOptions) -> URL? {
+        if let userActivity = connectionOptions.userActivities.first,
+            userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+            let webpageURL = userActivity.webpageURL {
+            return experienceURL(from: webpageURL)
+        } else if let urlContext = connectionOptions.urlContexts.first {
+            return experienceURL(from: urlContext.url)
+        } else {
+            return nil
+        }
+    }
+    
+    @available(iOS 13.0, *)
+    public func experienceURL(from openURLContexts: Set<UIOpenURLContext>) -> URL? {
+        openURLContexts
+            .compactMap { openURLContext in
+                experienceURL(from: openURLContext.url)
+            }
+            .first
+    }
+    
+    public func experienceURL(from url: URL) -> URL? {
+        guard let components = NSURLComponents(url: url, resolvingAgainstBaseURL: true),
+              let host = components.host,
+              domains.contains(host) else {
+            return nil
+        }
+        
+        if components.scheme == "https" {
+            return url
+        } else {
+            components.scheme = "https"
+            return components.url
         }
     }
 

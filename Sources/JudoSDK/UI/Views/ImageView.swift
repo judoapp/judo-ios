@@ -20,6 +20,7 @@ import os.log
 @available(iOS 13.0, *)
 struct ImageView: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.urlParameters) private var urlParameters
     @Environment(\.userInfo) private var userInfo
     @Environment(\.data) private var data
     
@@ -28,7 +29,7 @@ struct ImageView: View {
     var body: some View {
         if let inlineImage = inlineImage {
             imageView(uiImage: inlineImage)
-        } else if let urlString = urlString?.evaluatingExpressions(data: data, userInfo: userInfo), let resolvedURL = URL(string: urlString) {
+        } else if let urlString = urlString?.evaluatingExpressions(data: data, urlParameters: urlParameters, userInfo: userInfo), let resolvedURL = URL(string: urlString) {
             imageFetcher(url: resolvedURL)
         }
     }
@@ -54,7 +55,8 @@ struct ImageView: View {
             AnimatedImageView(
                 uiImage: uiImage,
                 scale: scale,
-                resizingMode: image.resizingMode
+                resizingMode: image.resizingMode,
+                size: estimatedImageSize
             )
         } else {
             StaticImageView(
@@ -143,7 +145,10 @@ private struct StaticImageView: View {
         case .originalSize:
             SwiftUI.Image(uiImage: uiImage)
                 .resizable()
-                .frame(width: frameSize.width, height: frameSize.height)
+                .frame(
+                    width: frameSize.width,
+                    height: frameSize.height
+                )
         case .scaleToFill:
                 SwiftUI.Rectangle().fill(Color.clear)
                     .overlay(
@@ -175,57 +180,51 @@ private struct StaticImageView: View {
     }
 }
 
-// MARK: - AnimatedImageView
+// MARK: - AnimatedImage
 
 @available(iOS 13.0, *)
 private struct AnimatedImageView: View {
     var uiImage: UIImage
     var scale: CGFloat
     var resizingMode: JudoModel.Image.ResizingMode
-    
+    var size: CGSize?
+
     var body: some View {
         switch resizingMode {
         case .originalSize:
-            UIAnimatedImageView(uiImage: uiImage, contentMode: .center)
+            AnimatedImage(uiImage: uiImage)
                 .frame(
-                    width: uiImage.size.width * scale,
-                    height: uiImage.size.height * scale
+                    width: frameSize.width,
+                    height: frameSize.height
                 )
-        case .scaleToFit:
-            UIAnimatedImageView(uiImage: uiImage, contentMode: .scaleAspectFit)
-                .scaledToFit()
         case .scaleToFill:
-            UIAnimatedImageView(uiImage: uiImage, contentMode: .scaleAspectFill)
-                .scaledToFill()
+            SwiftUI.Rectangle().fill(Color.clear)
+                .overlay(
+                    AnimatedImage(uiImage: uiImage)
+                        .scaledToFill()
+                )
+                .clipped()
+        case .scaleToFit:
+            AnimatedImage(uiImage: uiImage)
+                .scaledToFit()
+                .clipped()
         case .tile:
             // Tiling animated images is not supported -- fallback to static image.
             TilingImage(uiImage: uiImage, scale: scale)
         case .stretch:
-            UIAnimatedImageView(uiImage: uiImage, contentMode: .scaleToFill)
+            AnimatedImage(uiImage: uiImage)
         }
     }
-}
 
-@available(iOS 13.0, *)
-private struct UIAnimatedImageView: UIViewRepresentable {
-    let uiImage: UIImage
-    let contentMode: UIImageView.ContentMode
-
-    func makeUIView(context: Context) -> UIView {
-        let imageView = UIImageView()
-        imageView.translatesAutoresizingMaskIntoConstraints = false
-        imageView.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
-        imageView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        imageView.clipsToBounds = true
-        imageView.contentMode = contentMode
-        imageView.animationImages = uiImage.images
-        imageView.animationDuration = uiImage.duration
-        imageView.startAnimating()
-        return imageView
-    }
-
-    func updateUIView(_ view: UIView, context: Context) {
-
+    private var frameSize: CGSize {
+        if let size = size {
+            return size
+        } else {
+            return CGSize(
+                width: uiImage.size.width * scale,
+                height: uiImage.size.height * scale
+            )
+        }
     }
 }
 
@@ -234,9 +233,9 @@ private struct UIAnimatedImageView: UIViewRepresentable {
 @available(iOS 13.0, *)
 private struct TilingImage: View {
     var uiImage: UIImage
-    
+
     var scale: CGFloat
-    
+
     var body: some View {
         // tiling only uses the UIImage scale, it cannot be applied after .scaleEffect. so, generate a suitably large tiled image at the default 1x scale, and then scale the entire results down afterwards.
         if #available(iOS 14.0, *) {
@@ -245,11 +244,9 @@ private struct TilingImage: View {
                     .resizable(resizingMode: .tile)
                     // make sure enough tile is generated to accommodate the scaleEffect below.
                     .frame(
-                        width: geometry.size.width / scale,
-                        height: geometry.size.height / scale
+                        width: geometry.size.width,
+                        height: geometry.size.height
                     )
-                    // then scale it down to the correct size for the resolution.
-                    .scaleEffect(scale, anchor: .topLeading)
             }
         } else {
             // we cannot reliably use GeometryReader in all contexts on iOS 13, so instead, we'll just generate a default amount of tile that will accomodate most situations rather than the exact amount. this will waste some vram.
@@ -260,11 +257,9 @@ private struct TilingImage: View {
                         .resizable(resizingMode: .tile)
                         // make sure enough tile is generated to accommodate the scaleEffect below.
                         .frame(
-                            width: 600 / scale,
-                            height: 1000 / scale
+                            width: 600,
+                            height: 1000
                         )
-                        // then scale it down to the correct size for the resolution.
-                        .scaleEffect(scale, anchor: .topLeading)
                     ,
                     alignment: .topLeading
                 )
