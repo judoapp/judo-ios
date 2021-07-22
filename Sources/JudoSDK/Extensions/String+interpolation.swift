@@ -14,7 +14,6 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import Foundation
-import JudoModel
 
 // Reusable formatters since instantiating them is an expensive operation
 private let dateFormatter = DateFormatter()
@@ -59,7 +58,7 @@ extension String {
         }
     }
     
-    static func evaluate(expression: String, data: Any?, urlParameters: [String: String], userInfo: [String: String]) throws -> String {
+    private static func evaluate(expression: String, data: Any?, urlParameters: [String: String], userInfo: [String: String]) throws -> String {
         let regex = try! NSRegularExpression(pattern: "\"(.*)\"|([\\w\\d\\.\\-]+)")
         let range = NSRange(location: 0, length: expression.utf16.count)
         let arguments = regex.matches(in: expression, range: range).map { match -> String in
@@ -187,7 +186,7 @@ private extension String {
     }
 }
 
-extension Array where Element == Helper {
+private extension Array where Element == Helper {
     func evaluate(arguments: [String]) throws -> String? {
         for helper in self {
             if let result = try helper(arguments) {
@@ -199,7 +198,7 @@ extension Array where Element == Helper {
     }
 }
 
-struct StringExpressionError: Error {
+private struct StringExpressionError: Error {
     var message: String
     
     init(_ message: String) {

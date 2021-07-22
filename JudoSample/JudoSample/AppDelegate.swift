@@ -22,50 +22,50 @@ import JudoModel
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
-    var sampleViewedObserver: Any!
-    var sampleTapObserver: Any!
+    var screenViewedObserver: NSObjectProtocol?
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        Judo.initialize(accessToken: "<ACCESS-TOKEN>", domains: "myapp.judo.app")
+        Judo.initialize(accessToken: "<ACCESS-TOKEN>", domain: "myapp.judo.app")
         Judo.sharedInstance.performSync(prefetchAssets: true)
         Judo.sharedInstance.registerAppRefreshTask(taskIdentifier: "app.judo.background.refresh")
         
         application.registerForRemoteNotifications()
         
-        // Example integrations with Judo notifications: (iOS 13 check because the JudoModel API is not available when the SDK is in limp mode on iOS 12 and earlier)
-        if #available(iOS 13.0, *) {
-            // To listen to the Screen Viewed event from Judo (such as for integration into your own analytics tooling)
-            sampleViewedObserver = NotificationCenter.default.addObserver(forName: Judo.didViewScreenNotification, object: nil, queue: nil) { notification in
-                print(
-                    "Judo Screen Viewed",
-                    "Experience ID:", (notification.userInfo!["experience"] as? JudoModel.Experience)?.id ?? "<nil>",
-                    ", Experience Name:", (notification.userInfo!["experience"] as? JudoModel.Experience)?.name ?? "<nil>",
-                    ", Screen ID:", (notification.userInfo!["screen"] as? JudoModel.Screen)?.id ?? "<nil>",
-                    ", Screen Name:", (notification.userInfo!["screen"] as? JudoModel.Screen)?.name ?? "<nil>",
-                    ", Data:", notification.userInfo!["data"] as? [String: AnyHashable] ?? "<nil>",
-                    ", ScreenViewController instance", notification.userInfo!["screenViewController"] as? ScreenViewController as Any,
-                    ", ExperienceViewController instance", notification.userInfo!["experienceViewController"] as? ExperienceViewController as Any
-                )
-            }
-            
-            // To listen to the Action Tapped event from Judo (such as for implementing Custom action behaviour, or for integration into your own analytics tooling)
-            sampleTapObserver = NotificationCenter.default.addObserver(forName: Judo.didReceiveActionNotification, object: nil, queue: nil) { notification in
-                print(
-                    "Judo Action Tapped",
-                    "Experience ID:", (notification.userInfo!["experience"] as? JudoModel.Experience)?.id ?? "<nil>",
-                    "Experience Name:", (notification.userInfo!["experience"] as? JudoModel.Experience)?.name ?? "<nil>",
-                    ", Screen ID:", (notification.userInfo!["screen"] as? JudoModel.Screen)?.id ?? "<nil>",
-                    ", Screen Name:", (notification.userInfo!["screen"] as? JudoModel.Screen)?.name ?? "<nil>",
-                    ", Node ID:", (notification.userInfo!["node"] as? JudoModel.Node)?.id ?? "<nil>",
-                    ", Node Name:", (notification.userInfo!["node"] as? JudoModel.Node)?.name ?? "<nil>",
-                    ", Data:", notification.userInfo!["data"] as? [String: AnyHashable] ?? "<nil>",
-                    ", ScreenViewController instance", notification.userInfo!["screenViewController"] as? ScreenViewController as Any,
-                    ", ExperienceViewController instance", notification.userInfo!["experienceViewController"] as? ExperienceViewController as Any
-                )
-            }
-        }
-        
+        trackScreenViews()
         return true
+    }
+    
+    /// Integrate Judo screen views into your existing analytics, messaging and customer data platform.
+    func trackScreenViews() {
+        if #available(iOS 13.0, *) {
+            screenViewedObserver = NotificationCenter.default.addObserver(
+                forName: Judo.screenViewedNotification,
+                object: nil,
+                queue: OperationQueue.main,
+                using: { notification in
+                    let screen = notification.userInfo!["screen"] as! Screen
+                    let experience = notification.userInfo!["experience"] as! Experience
+                    let properties = [
+                        "screenID": screen.id,
+                        "screenName": screen.name ?? "Screen",
+                        "experienceID": experience.id,
+                        "experienceName": experience.name
+                    ]
+                    
+                    // Amplitude
+                    // Amplitude.instance().logEvent("judo screen viewed", withEventProperties: properties)
+                    
+                    // Braze
+                    // Appboy.sharedInstance()?.logCustomEvent("Judo Screen Viewed", withProperties: properties)
+                    
+                    // Segment
+                    // let screenTitle = "\(experience.name) / \(screen.name ?? "Screen")"
+                    // Analytics.shared().screen(screenTitle, category: "Judo", properties: properties)
+                    
+                    print("Screen tracked: \(properties)")
+                }
+            )
+        }
     }
     
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
@@ -73,7 +73,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        Judo.sharedInstance.setPushToken(apnsToken: deviceToken)
+        Judo.sharedInstance.registeredForRemoteNotifications(deviceToken: deviceToken)
     }
 
     func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {

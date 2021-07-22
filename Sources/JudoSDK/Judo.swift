@@ -13,18 +13,15 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+import BackgroundTasks
+import Combine
 import Foundation
+import JudoModel
 import os.log
 import UIKit
-import BackgroundTasks
-import JudoModel
 
 public final class Judo {
-    /// Access token.
-    public let accessToken: String
-    
-    /// App domain name.
-    public let domains: [String]
+    public let configuration: Configuration
     
     /// Obtain the Judo SDK instance (after calling [initialize(accessToken:domain:)](x-source-tag://initialize)).
     public static var sharedInstance: Judo {
@@ -39,26 +36,66 @@ public final class Judo {
     private static var _instance: Judo?
 
     /// Initialize the JudoSDK given the accessToken and domain name.
-    /// - Tag: initialize
-    public static func initialize(accessToken: String, domains: String...) {
-        Self.initialize(accessToken: accessToken, domains: domains)
-    }
-
-    /// Initialize the JudoSDK given the accessToken and domain name.
-    internal static func initialize(accessToken: String, domains: [String]) {
+    public static func initialize(accessToken: String, domain: String) {
         precondition(!accessToken.isEmpty, "Missing Judo access token.")
-        precondition(!domains.isEmpty, "Must have at least a single Judo domain.")
-        precondition(!domains.contains(where: \.isEmpty), "Judo domains must not be empty strings.")
-        _instance = Judo(accessToken: accessToken, domains: domains)
-    }
-
-    private init(accessToken: String, domains: [String]) {
-        self.accessToken = accessToken
-        self.domains = domains
+        precondition(!domain.isEmpty, "Judo domain must not be empty string.")
+        let configuration = Configuration(
+            accessToken: accessToken,
+            domain: domain
+        )
         
-        // Flush any outstanding events on initialization.
+        initialize(configuration: configuration)
+    }
+    
+    public static func initialize(configuration: Configuration) {
+        _instance = Judo(configuration: configuration)
+    }
+    
+    let analytics = Analytics()
+    
+    private init(configuration: Configuration) {
+        self.configuration = configuration
+        
         if #available(iOS 13.0, *) {
-            analytics.flushEvents()
+            observeScreenViews()
+        }
+    }
+    
+    private var screenViewedObserver: NSObjectProtocol?
+    
+    @available(iOS 13.0, *)
+    private func observeScreenViews() {
+        screenViewedObserver = NotificationCenter.default.addObserver(
+            forName: Judo.screenViewedNotification,
+            object: nil,
+            queue: OperationQueue.main,
+            using: { [unowned self] notification in
+                switch configuration.analyticsMode {
+                case .default, .anonymous:
+                    break
+                case .minimal, .disabled:
+                    return
+                }
+                
+                let screen = notification.userInfo!["screen"] as! Screen
+                let experience = notification.userInfo!["experience"] as! Experience
+                let properties = try! JSON([
+                    "id": screen.id,
+                    "name": screen.name ?? "Screen",
+                    "experienceID": experience.id,
+                    "experienceRevisionID": experience.revisionID,
+                    "experienceName": experience.name
+                ])
+                
+                let event = Event.screen(properties: properties)
+                track(event: event)
+            }
+        )
+    }
+    
+    deinit {
+        if let screenViewedObserver = self.screenViewedObserver {
+            NotificationCenter.default.removeObserver(screenViewedObserver)
         }
     }
     
@@ -78,9 +115,6 @@ public final class Judo {
     
     @available(iOS 13.0, *)
     internal lazy var downloader: AssetsDownloader = AssetsDownloader(cache: assetsURLCache)
-    
-    @available(iOS 13.0, *)
-    internal lazy var analytics: Analytics = Analytics()
 
     static let userDefaults = UserDefaults(suiteName: "app.judo.JudoSDK")!
 
@@ -108,37 +142,6 @@ public final class Judo {
     public lazy var screenViewController: (_ experience: Experience, _ screen: Screen, _ data: Any?, _ urlParameters: [String: String], _ userInfo: [String: String]) -> ScreenViewController = ScreenViewController.init(experience:screen:data:urlParameters:userInfo:)
     
     // MARK: Methods
-
-    /// Register push notifications token on a server.
-    /// - Parameter apnsToken: A globally unique token that identifies this device to APNs.
-    public func setPushToken(apnsToken deviceToken: Data) {
-        let tokenStringHex = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
-        judo_log(.debug, "Registering for Judo remote notifications with token: %@", tokenStringHex)
-
-        let requestBody = RegisterTokenBody(
-            deviceID: UIDevice().identifierForVendor?.uuidString ?? "",
-            deviceToken: tokenStringHex,
-            environment: apsEnvironment
-        )
-        let jsonEncoder = JSONEncoder()
-        let body: Data
-        do {
-            body = try jsonEncoder.encode(requestBody)
-        } catch {
-            judo_log(.error, "Unable to encode push token registration request message body")
-            return
-        }
-
-        var request = URLRequest.judoApi(url: URL(string: "https://devices.judo.app/register")!)
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpMethod = "PUT"
-        request.httpBody = body
-        URLSession.shared.dataTask(with: request) { result in
-            if case .failure(let error) = result {
-                judo_log(.error, "Failed to register push token: %@", error.debugDescription)
-            }
-        }.resume()
-    }
     
     /// Call this method to instruct Judo to (asynchronously) perform a sync.
     /// - Parameters:
@@ -267,11 +270,11 @@ public final class Judo {
     /// - Parameter timeInterval: The time interval after what run the task.
     public func registerAppRefreshTask(taskIdentifier: String, timeInterval: TimeInterval = 15 * 60) {
         precondition(!taskIdentifier.isEmpty, "Missing task identifier.")
-        precondition(!accessToken.isEmpty, "Missing Judo access token.")
-        precondition(!domains.isEmpty, "Must have at least a single Judo domain.")
+        precondition(!configuration.accessToken.isEmpty, "Missing Judo access token.")
+        precondition(!configuration.domain.isEmpty, "Judo domain must not be empty string.")
 
         if #available(iOS 13.0, *) {
-            AppRefreshTask.registerBackgroundTask(taskIdentifier: taskIdentifier, timeInterval: timeInterval, accessToken: accessToken, domains: domains)
+            AppRefreshTask.registerBackgroundTask(taskIdentifier: taskIdentifier, timeInterval: timeInterval)
             NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { (notification) in
                 AppRefreshTask.scheduleJudoRefresh(taskIdentifier: taskIdentifier, timeInterval: timeInterval)
             }
@@ -279,97 +282,167 @@ public final class Judo {
             judo_log(.debug, "Judo runs in skeleton mode on iOS <13, ignoring background app refresh task registration request.")
         }
     }
-    
-    // MARK: URL Conversion Utils
-    
-    @available(iOS 13.0, *)
-    public func experienceURL(from connectionOptions: UIScene.ConnectionOptions) -> URL? {
-        if let userActivity = connectionOptions.userActivities.first,
-            userActivity.activityType == NSUserActivityTypeBrowsingWeb,
-            let webpageURL = userActivity.webpageURL {
-            return experienceURL(from: webpageURL)
-        } else if let urlContext = connectionOptions.urlContexts.first {
-            return experienceURL(from: urlContext.url)
-        } else {
-            return nil
-        }
-    }
-    
-    @available(iOS 13.0, *)
-    public func experienceURL(from openURLContexts: Set<UIOpenURLContext>) -> URL? {
-        openURLContexts
-            .compactMap { openURLContext in
-                experienceURL(from: openURLContext.url)
-            }
-            .first
-    }
-    
-    public func experienceURL(from url: URL) -> URL? {
-        guard let components = NSURLComponents(url: url, resolvingAgainstBaseURL: true),
-              let host = components.host,
-              domains.contains(host) else {
-            return nil
-        }
-        
-        if components.scheme == "https" {
-            return url
-        } else {
-            components.scheme = "https"
-            return components.url
-        }
-    }
 
     // MARK: Computed Values
     
-    internal var domainURLs: [URL] {
-        self.domains.map { domain in
-            guard let url = URL(string: "https://\(domain)") else {
-                fatalError("Invalid domain '\(domain)' given to Judo SDK.")
-            }
-            return url
+    internal var domainURL: URL {
+        guard let url = URL(string: "https://\(configuration.domain)") else {
+            fatalError("Invalid domain '\(configuration.domain)' given to Judo SDK.")
+        }
+        
+        return url
+    }
+    
+    // MARK: Register
+    
+    public var deviceToken: String? {
+        Judo.userDefaults.string(forKey: "deviceToken")
+    }
+    
+    public func registeredForRemoteNotifications(deviceToken: Data) {
+        let hexValue = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
+        Judo.userDefaults.setValue(hexValue, forKey: "deviceToken")
+        
+        switch configuration.analyticsMode {
+        case .default, .anonymous, .minimal:
+            let event = Event.register
+            track(event: event)
+        case .disabled:
+            break
         }
     }
     
-    internal var apsEnvironment: String {
-            #if targetEnvironment(simulator)
-            return "SIMULATOR"
-            #else
-            guard let path = Bundle.main.path(forResource: "embedded", ofType: "mobileprovision") else {
-                judo_log(.error, "Provisioning profile not found")
-                return "PRODUCTION"
-            }
-            
-            guard let embeddedProfile = try? String(contentsOfFile: path, encoding: String.Encoding.ascii) else {
-                judo_log(.error, "Failed to read provisioning profile at path: %@", path)
-                return "PRODUCTION"
-            }
-            
-            let scanner = Scanner(string: embeddedProfile)
-            var string: NSString?
-            
-            guard scanner.scanUpTo("<?xml version=\"1.0\" encoding=\"UTF-8\"?>", into: nil), scanner.scanUpTo("</plist>", into: &string) else {
-                judo_log(.error, "Unrecognized provisioning profile structure")
-                return "PRODUCTION"
-            }
-            
-            guard let data = string?.appending("</plist>").data(using: String.Encoding.utf8) else {
-                judo_log(.error, "Failed to decode provisioning profile")
-                return "PRODUCTION"
-            }
-            
-            guard let plist = (try? PropertyListSerialization.propertyList(from: data, options: [], format: nil)) as? [String: Any] else {
-                judo_log(.error, "Failed to serialize provisioning profile")
-                return "PRODUCTION"
-            }
-            
-            guard let entitlements = plist["Entitlements"] as? [String: Any], let apsEnvironment = entitlements["aps-environment"] as? String else {
-                judo_log(.info, "No entry for \"aps-environment\" found in Entitlements – defaulting to production")
-                return "PRODUCTION"
-            }
-            
-            return apsEnvironment.uppercased()
-            #endif
+    // MARK: Identity
+    
+    public var anonymousID: String {
+        if let anonymousID = Judo.userDefaults.string(forKey: "anonymousID") {
+            return anonymousID
+        } else {
+            let anonymousID = UUID().uuidString
+            Judo.userDefaults.setValue(anonymousID, forKey: "anonymousID")
+            return anonymousID
         }
+    }
+    
+    public var userID: String? {
+        Judo.userDefaults.string(forKey: "userID")
+    }
+    
+    public var traits: JSON? {
+        guard let data = Judo.userDefaults.data(forKey: "traits") else {
+            return nil
+        }
+        
+        return try? JSONDecoder().decode(JSON.self, from: data)
+    }
+    
+    public func identify<T: Codable>(userID: String? = nil, traits: T? = nil) {
+        if let userID = userID {
+            Judo.userDefaults.setValue(userID, forKey: "userID")
+        }
+        
+        if let traits = traits {
+            do {
+                let data = try JSONEncoder().encode(traits)
+                Judo.userDefaults.setValue(data, forKey: "traits")
+            } catch {
+                judo_log(.error, "Failed to encode traits")
+            }
+        }
+        
+        switch configuration.analyticsMode {
+        case .default:
+            let event = Event.identify(traits: self.traits)
+            track(event: event)
+        case .anonymous, .minimal, .disabled:
+            break
+        }
+    }
+    
+    public func reset() {
+        Judo.userDefaults.removeObject(forKey: "anonymousID")
+        Judo.userDefaults.removeObject(forKey: "userID")
+        Judo.userDefaults.removeObject(forKey: "traits")
+    }
+    
+    // MARK: Events
+    
+    func track(event: Event) {
+        let context = EventContext(deviceToken: deviceToken)
+        
+        var payload = EventPayload(
+            anonymousID: anonymousID,
+            event: event,
+            context: context
+        )
+        
+        switch configuration.analyticsMode {
+        case .default:
+            payload.userID = self.userID
+        case .anonymous, .minimal, .disabled:
+            payload.userID = nil
+        }
+        
+        analytics.addEvent(payload)
+    }
+    
+    // MARK: Presentation
+    
+    public var userInfo: [String: String] {
+        var result = [String: String]()
+        
+        if case .object(let object) = traits {
+            object.forEach { element in
+                if case .string(let value) = element.value {
+                    result[element.key] = value
+                }
+            }
+        }
+        
+        result["anonymousID"] = anonymousID
+        
+        if let userID = userID {
+            result["userID"] = userID
+        }
+        
+        return result
+    }
+    
+    @discardableResult
+    public func continueUserActivity(_ userActivity: NSUserActivity, animated: Bool) -> Bool {
+        guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+              let url = userActivity.webpageURL else {
+            return false
+        }
+        
+        return openURL(url, animated: animated)
+    }
+    
+    @discardableResult
+    public func openURL(_ url: URL, animated: Bool) -> Bool {
+        guard let components = NSURLComponents(url: url, resolvingAgainstBaseURL: true),
+              components.host == configuration.domain else {
+            return false
+        }
+        
+        components.scheme = "https"
+        
+        guard let url = components.url else {
+            return false
+        }
+        
+        let viewController = ExperienceViewController(url: url, userInfo: userInfo)
+        
+        DispatchQueue.main.async {
+            self.configuration.rootViewController()?.present(
+                viewController,
+                animated: animated,
+                completion: nil
+            )
+        }
+        
+        return true
+    }
 }
 
 private extension URLCache {
@@ -409,38 +482,18 @@ private extension NSCache {
     }
 }
 
-private struct RegisterTokenBody: Codable {
-    var deviceID: String
-    var deviceToken: String
-    var environment: String
-}
-
-
 // MARK: Notifications
 
 extension Judo {
-    /// Subscribe to this event to be informed of when the user views an Experience Screen.
+    /// Posted when a screen is viewed.
     ///
-    /// The following values are available in `userInfo`:
+    /// The Judo SDK posts this notification when the user views a screen in a Judo experience.
     ///
-    /// -  `experience` -> `JudoModel.Experience`
-    /// -  `screen` -> `JudoModel.Screen`
-    /// -  `data` -> The JSON data from the Data Source associated with the Screen,`[String: AnyHashable]`, where the AnyHashable values can range from `Double`, `String`, `[AnyHashable]`, and `[String: AnyHashable]`.
-    /// -  `screenViewController` -> The `ScreenViewController` instance displaying the Screen.
-    /// -  `experienceViewController` -> The `ExperienceViewController` instance hosting the entire Experience.
-    public static let didViewScreenNotification: Notification.Name = Notification.Name("JudoScreenViewedNotification")
-    
-    /// Subscribe to this event to be informed of when the user taps/activates an Action.
-    ///
-    /// The following values are available in `userInfo`:
-    ///
-    /// -  `experience` -> `JudoModel.Experience`
-    /// -  `screen` -> `JudoModel.Screen`
-    /// -  `node` -> The `JudoModel.Node` interacted with (tapped) by the user.
-    /// -  `data` -> The JSON data from the Data Source associated with the Node,`[String: AnyHashable]`, where the AnyHashable values can range from `Double`, `String`, `[AnyHashable]`, and `[String: AnyHashable]`.
-    /// -  `screenViewController` -> The `ScreenViewController` instance displaying the Screen.
-    /// -  `experienceViewController` -> The `ExperienceViewController` instance hosting the entire Experience.
-    public static let didReceiveActionNotification = NSNotification.Name("JudoActionTappedNotification")
+    /// The `userInfo` dictionary contains the following information:
+    /// -  `experience`: The `Experience` the screen belongs to.
+    /// -  `screen`: The `Screen` that was viewed.
+    /// -  `data`: The JSON data available to the screen at the time it was viewed.
+    public static let screenViewedNotification: Notification.Name = Notification.Name("JudoScreenViewedNotification")
     
     public static let didRegisterCustomFontNotification = NSNotification.Name("JudoDidRegisterCustomFontNotification")
 }

@@ -110,16 +110,16 @@ open class ScreenViewController: UIViewController, UIScrollViewDelegate {
     
     open override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+
         NotificationCenter.default.post(
-            name: Judo.didViewScreenNotification,
+            name: Judo.screenViewedNotification,
             object: nil,
             userInfo: [
                 "experience": experience,
                 "screen": screen,
-                "data": data as Any,
-                "screenViewController": self,
-                "experienceViewController": experienceViewController as Any
-            ])
+                "data": data as Any
+            ]
+        )
     }
 
     private func configureNavBar() {

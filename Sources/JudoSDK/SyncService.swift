@@ -119,9 +119,7 @@ final class SyncService {
         }
         
         // queue up sync for all the domains.
-        Judo.sharedInstance.domainURLs.forEach { domainURL in
-            syncForDomain(domainURL: domainURL)
-        }
+        syncForDomain(domainURL: Judo.sharedInstance.domainURL)
 
         fetchGroup.notify(queue: .main) {
             judo_log(.debug, "Completed sync run for all Judo domains.")

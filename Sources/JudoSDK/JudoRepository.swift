@@ -30,7 +30,8 @@ final public class JudoRepository {
     /// Retrieve Experience data.
     /// - Parameter url: Experience URL
     public func retrieveExperience(url: URL, ignoreCache: Bool = false, completion: @escaping (Result<Experience, Swift.Error>) -> Void) {
-        guard let host = NSURLComponents(url: url, resolvingAgainstBaseURL: true)?.host, Judo.sharedInstance.domains.contains(host) else {
+        guard let host = NSURLComponents(url: url, resolvingAgainstBaseURL: true)?.host,
+              host == Judo.sharedInstance.configuration.domain else {
             let host = NSURLComponents(url: url, resolvingAgainstBaseURL: true)?.host ?? "<unknown>"
             judo_log(.error, "Attempt to retrieve an Experience for a domain not configured with Judo.initialize(): %@", host)
             DispatchQueue.main.async {

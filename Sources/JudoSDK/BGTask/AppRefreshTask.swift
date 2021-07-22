@@ -20,7 +20,7 @@ import BackgroundTasks
 @available(iOS 13.0, *)
 enum AppRefreshTask {
 
-    static func registerBackgroundTask(taskIdentifier: String, timeInterval: TimeInterval, accessToken: String, domains: [String]) {
+    static func registerBackgroundTask(taskIdentifier: String, timeInterval: TimeInterval) {
         guard let permittedIdentifiers = Bundle.main.object(forInfoDictionaryKey: "BGTaskSchedulerPermittedIdentifiers") as? [String],
               permittedIdentifiers.contains(taskIdentifier)
         else {
@@ -29,11 +29,11 @@ enum AppRefreshTask {
         }
 
         BGTaskScheduler.shared.register(forTaskWithIdentifier: taskIdentifier, using: nil) { task in
-            handleJudoRefresh(task: task as! BGAppRefreshTask, timeInterval: timeInterval, accessToken: accessToken, domains: domains)
+            handleJudoRefresh(task: task as! BGAppRefreshTask, timeInterval: timeInterval)
         }
     }
 
-    static func handleJudoRefresh(task: BGAppRefreshTask, timeInterval: TimeInterval, accessToken: String, domains: [String]) {
+    static func handleJudoRefresh(task: BGAppRefreshTask, timeInterval: TimeInterval) {
         scheduleJudoRefresh(taskIdentifier: task.identifier, timeInterval: timeInterval)
         
         DispatchQueue.main.async {

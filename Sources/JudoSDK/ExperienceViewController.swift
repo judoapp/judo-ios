@@ -157,6 +157,8 @@ open class ExperienceViewController: UIViewController {
                 return nil
             }
             
+            launchContext.userInfo = userInfo
+            
             let queryItems = urlComponents.queryItems
             urlComponents.query = nil
             self.url = urlComponents.url!

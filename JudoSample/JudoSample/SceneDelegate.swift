@@ -22,32 +22,17 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
     
-    // Properties of the current user. These can be passed to the
-    // `ExperienceViewController` to personalize the content in the experience.
-    let exampleUserInfo = [
-            "userID": "80000516109",
-            "firstName": "John",
-            "avatar": "https://reqres.in/img/faces/1-image.jpg",
-            "pointsBalance": "54,231",
-            "subscription": "Premium",
-            "memberSince": "2020-07-05T04:04:00Z"
-    ]
-    
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
-        if let experienceURL = Judo.sharedInstance.experienceURL(from: connectionOptions) {
-            let vc = ExperienceViewController(url: experienceURL, userInfo: exampleUserInfo)
-            
-            // present on top of the view controller you already have configured (eg. in a storyboard):
-            DispatchQueue.main.async {
-                self.window?.rootViewController?.present(vc, animated: false)
-            }
+        if let userActivity = connectionOptions.userActivities.first {
+            Judo.sharedInstance.continueUserActivity(userActivity, animated: false)
+        } else if let urlContext = connectionOptions.urlContexts.first {
+            Judo.sharedInstance.openURL(urlContext.url, animated: false)
         }
     }
     
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
-        if let experienceURL = Judo.sharedInstance.experienceURL(from: URLContexts) {
-            let vc = ExperienceViewController(url: experienceURL, userInfo: exampleUserInfo)
-            self.window?.rootViewController?.present(vc, animated: true)
+        if let context = URLContexts.first {
+            Judo.sharedInstance.openURL(context.url, animated: true)
         }
     }
 }

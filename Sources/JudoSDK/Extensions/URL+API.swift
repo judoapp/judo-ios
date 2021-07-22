@@ -18,7 +18,7 @@ import UIKit
 import JudoModel
 
 extension URLRequest {
-    static func judoApi(url: URL, accessToken: String = Judo.sharedInstance.accessToken, identifierForVendor: String = UIDevice().identifierForVendor?.uuidString ?? "") -> URLRequest {
+    static func judoApi(url: URL, accessToken: String = Judo.sharedInstance.configuration.accessToken, identifierForVendor: String = UIDevice().identifierForVendor?.uuidString ?? "") -> URLRequest {
         var request = URLRequest(url: url)
         request.addValue("application/json", forHTTPHeaderField: "Accept")
         request.addValue("gzip, deflate", forHTTPHeaderField: "Accept-Encoding")
@@ -28,7 +28,7 @@ extension URLRequest {
         return request
     }
     
-    static func experienceJudoApi(url: URL, accessToken: String = Judo.sharedInstance.accessToken, identifierForVendor: String = UIDevice().identifierForVendor?.uuidString ?? "") -> URLRequest {
+    static func experienceJudoApi(url: URL, accessToken: String = Judo.sharedInstance.configuration.accessToken, identifierForVendor: String = UIDevice().identifierForVendor?.uuidString ?? "") -> URLRequest {
         var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
         components.queryItems = [URLQueryItem(name: "apiVersion", value: Meta.APIVersion.description)] + (components.queryItems ?? [])
         return judoApi(url: components.url!, accessToken: accessToken, identifierForVendor: identifierForVendor)

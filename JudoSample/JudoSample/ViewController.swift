@@ -18,10 +18,33 @@ import UIKit
 import JudoSDK
 
 class ViewController: UIViewController {
-
-    @IBAction func buttonTapped(_ sender: Any) {
-        // Open an Experience
-        let experienceViewController = ExperienceViewController(url: URL(string: "<URL-TO-PUBLISHED-JUDO-EXPERIENCE-HERE>")!)
-        self.present(experienceViewController, animated: true)
+    @IBAction func presentExperience(_ sender: Any) {
+        let url = URL(string: "<JUDO-EXPERIENCE-URL>")!
+        Judo.sharedInstance.openURL(url, animated: true)
+    }
+    
+    @IBAction func identify(_ sender: Any) {
+        // Pass user ID and custom properties to Judo for personalization
+        struct UserTraits: Codable {
+            let name: String
+            let pointsBalance: Int
+            let premiumTier: Bool
+            let tags: [String]
+        }
+        
+        Judo.sharedInstance.identify(
+            userID: "john@example.com",
+            traits: UserTraits(
+                name: "John Doe",
+                pointsBalance: 50_000,
+                premiumTier: true,
+                tags: ["foo", "bar", "baz"]
+            )
+        )
+    }
+    
+    @IBAction func reset(_ sender: Any) {
+        // Clear user ID and custom properties
+        Judo.sharedInstance.reset()
     }
 }

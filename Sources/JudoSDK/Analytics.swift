@@ -13,198 +13,311 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-import Foundation
 import UIKit
 
-import JudoModel
-
 /// Responsible for tracking events needed for Judo's analytics functionality.
-@available(iOS 13.0, *)
 final class Analytics {
-    init() {
-        listeners.append(
-            NotificationCenter.default.addObserver(forName: Judo.didViewScreenNotification, object: nil, queue: nil) { [self] notification in
-                guard let experience = notification.userInfo!["experience"] as? JudoModel.Experience,
-                      let screen = notification.userInfo!["screen"] as? JudoModel.Screen else {
-                    assertionFailure()
-                    judo_log(.error, "Analytics service did not get expected fields.")
-                    return
-                }
-                
-                trackScreenViewed(experience: experience, screen: screen)
-            }
-        )
-    }
+    let flushAt: Int
+    let flushInterval: Double
+    let maxBatchSize: Int
+    let maxQueueSize: Int
     
-    /// The persisted event queue.
-    ///
-    /// Access should be serialized through the operation queue to avoid loss of events and avoiding expensive decodes on the main thread.
-    private var queue: [ScreenViewedEvent] {
-        get {
-            guard let eventJson = Judo.userDefaults.data(forKey: "event-queue") else {
-                return []
-            }
-            do {
-                return try jsonDecoder.decode([ScreenViewedEvent].self, from: eventJson)
-            } catch {
-                judo_log(.error, "Invalid persisted event queue JSON, ignoring. (Reason: %s)", error.debugDescription)
-                return []
-            }
-        }
-        set {
-            do {
-                let eventJson = try jsonEncoder.encode(newValue)
-                Judo.userDefaults.setValue(eventJson, forKey: "event-queue")
-            } catch {
-                judo_log(.error, "Unable to encode and persist new event queue JSON, ignoring update. (Reason: %s)", error.debugDescription)
-            }
-        }
-    }
+    private let urlSession: URLSession
     
-    /// Currently running upload task.
+    private let serialQueue: Foundation.OperationQueue = {
+        let q = Foundation.OperationQueue()
+        q.maxConcurrentOperationCount = 1
+        return q
+    }()
+    
+    // The following variables comprise the Analytics state and should only be
+    // modified from within an operation on the serial queue.
+    private var eventQueue = [EventPayload]()
     private var uploadTask: URLSessionTask?
+    private var timer: Timer?
     
-    private var listeners: [Any] = []
+    private var backgroundTask = UIBackgroundTaskIdentifier.invalid
     
-    static var defaultURLSessionConfiguration: URLSessionConfiguration {
+    private var cache: URL? {
+        return FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?.appendingPathComponent("events").appendingPathExtension("plist")
+    }
+    
+    private var didBecomeActiveObserver: NSObjectProtocol?
+    private var willResignActiveObserver: NSObjectProtocol?
+    private var didEnterBackgroundObserver: NSObjectProtocol?
+    
+    init(flushAt: Int = 20, flushInterval: Double = 30.0, maxBatchSize: Int = 100, maxQueueSize: Int = 1_000) {
         let configuration = URLSessionConfiguration.default
         configuration.networkServiceType = .background
-        return configuration
+        urlSession = URLSession(configuration: configuration)
+        
+        self.flushAt = flushAt
+        self.flushInterval = flushInterval
+        self.maxBatchSize = maxBatchSize
+        self.maxQueueSize = maxQueueSize
+    
+        restoreEvents()
+        addObservers()
     }
     
-    /// URL Session used for upload tasks.
-    private var urlSession = URLSession(configuration: defaultURLSessionConfiguration)
-    
-    private let jsonDecoder: JSONDecoder = {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return decoder
-    }()
-    
-    private let jsonEncoder: JSONEncoder = {
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        return encoder
-    }()
-    
-    /// This queue is used to serialize (in the background) event operations.
-    private let serialQueue = DispatchQueue(label: "JudoEventQueue", qos: .background, attributes: [], autoreleaseFrequency: .workItem, target: nil)
-        
-    private func trackScreenViewed(experience: Experience, screen: Screen) {
-        let event = ScreenViewedEvent(
-            properties: ScreenViewedEvent.Properties(
-                experienceID: experience.id,
-                experienceName: experience.name,
-                experienceRevisionID: experience.revisionID,
-                screenID: screen.id,
-                screenName: screen.name,
-                screenTags: screen.metadata?.tags ?? Set<String>([])
-            )
-        )
-        
-        serialQueue.async { [weak self] in
-            self?.queue.append(
-                event
-            )
-            self?.flushEvents()
+    private func restoreEvents() {
+        serialQueue.addOperation {
+            judo_log(.debug, "Restoring events from cache...")
+            
+            guard let cache = self.cache else {
+                judo_log(.error, "Cache not found")
+                return
+            }
+            
+            if !FileManager.default.fileExists(atPath: cache.path) {
+                judo_log(.debug, "Cache is empty, no events to restore")
+                return
+            }
+            
+            do {
+                let data = try Data(contentsOf: cache)
+                self.eventQueue = try PropertyListDecoder().decode([EventPayload].self, from: data)
+                judo_log(.debug, "%d event(s) restored from cache", self.eventQueue.count)
+            } catch {
+                judo_log(.error, "Failed to restore events from cache: %@", error.debugDescription)
+            }
         }
     }
     
-    // MARK: Queue & Flushing
+    private func addObservers() {
+        self.didBecomeActiveObserver = NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: OperationQueue.main) { [weak self] _ in
+            self?.startTimer()
+        }
+        
+        self.willResignActiveObserver = NotificationCenter.default.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: OperationQueue.main) { [weak self] _ in
+            self?.stopTimer()
+        }
+        
+        self.didEnterBackgroundObserver = NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: OperationQueue.main) { [weak self] _ in
+            self?.beginBackgroundTask()
+            self?.flushEvents()
+        }
+        
+        if UIApplication.shared.applicationState == .active {
+            self.startTimer()
+        }
+    }
     
-    public func flushEvents() {
-        serialQueue.async { [weak self] in
-            guard let self = self else {
-                return
+    deinit {
+        self.stopTimer()
+        
+        if let didBecomeActiveObserver = self.didBecomeActiveObserver {
+            NotificationCenter.default.removeObserver(didBecomeActiveObserver)
+        }
+        
+        if let willResignActiveObserver = self.willResignActiveObserver {
+            NotificationCenter.default.removeObserver(willResignActiveObserver)
+        }
+        
+        if let didEnterBackgroundObserver = self.didEnterBackgroundObserver {
+            NotificationCenter.default.removeObserver(didEnterBackgroundObserver)
+        }
+    }
+    
+    func addEvent(_ payload: EventPayload) {
+        serialQueue.addOperation {
+            if self.eventQueue.count == self.maxQueueSize {
+                judo_log(.debug, "Event queue is at capacity (%d) – removing oldest event", self.maxQueueSize)
+                self.eventQueue.remove(at: 0)
             }
-            guard self.uploadTask == nil else {
-                judo_log(.error, "Event flush already running, ignoring request to do so.")
+            
+            self.eventQueue.append(payload)
+               
+            judo_log(.debug, "Added event to queue: %@", payload.event.description)
+            judo_log(.debug, "Queue now contains %d event(s)", self.eventQueue.count)
+        }
+        
+        persistEvents()
+        
+        let onMainThread: (() -> Void) -> Void = { block in
+            if Thread.isMainThread {
+                block()
+            } else {
+                DispatchQueue.main.sync {
+                    block()
+                }
+            }
+        }
+        
+        onMainThread {
+            if UIApplication.shared.applicationState == .active {
+                flushEvents(minBatchSize: flushAt)
+            } else {
+                flushEvents()
+            }
+        }
+    }
+    
+    private func persistEvents() {
+        serialQueue.addOperation {
+            judo_log(.debug, "Persisting events to cache...")
+            
+            guard let cache = self.cache else {
+                judo_log(.error, "Cache not found")
                 return
             }
             
-            guard !self.queue.isEmpty else {
+            do {
+                let encoder = PropertyListEncoder()
+                encoder.outputFormat = .xml
+                let data = try encoder.encode(self.eventQueue)
+                try data.write(to: cache, options: [.atomic])
+                judo_log(.debug, "Cache now contains %d event(s)", self.eventQueue.count)
+            } catch {
+                judo_log(.error, "Failed to persist events to cache: %@", error.debugDescription)
+            }
+        }
+    }
+    
+    private func flushEvents(minBatchSize: Int = 1) {
+        serialQueue.addOperation {
+            if self.uploadTask != nil {
+                judo_log(.debug, "Skipping flush – already in progress")
                 return
             }
             
-            var request = URLRequest.judoApi(
-                url: URL(string: "https://analytics.judo.app/track")!
-            )
+            if self.eventQueue.isEmpty {
+                judo_log(.debug, "Skipping flush – no events in the queue")
+                return
+            }
+            
+            if self.eventQueue.count < minBatchSize {
+                judo_log(.debug, "Skipping flush – less than %d events in the queue", minBatchSize)
+                return
+            }
+            
+            let events = Array(self.eventQueue.prefix(self.maxBatchSize))
+            let url = URL(string: "https://analytics.judo.app/batch")!
+            
+            var request = URLRequest.judoApi(url: url)
             request.httpMethod = "POST"
             request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-
-            let eventsToSend = self.queue
+            
             do {
-                let httpBody = try self.jsonEncoder.encode(eventsToSend)
-                request.httpBody = httpBody
+                let batch = Batch(events: events)
+                let encoder = JSONEncoder()
+                encoder.dateEncodingStrategy = .iso8601
+                request.httpBody = try encoder.encode(batch)
             } catch {
                 judo_log(.error, "Unable to encode events for tracking to web API. (Reason: %s", error.debugDescription)
-                self.dropEvents(events: eventsToSend)
+                self.removeEvents(events)
                 return
             }
             
-            self.uploadTask = self.urlSession.dataTask(with: request) { (result: Result<Data, URLSession.NetworkError>) in
+            judo_log(.debug, "Uploading %d event(s) to server", events.count)
+            
+            let uploadTask = self.urlSession.dataTask(with: request) { result in
                 switch result {
                 case .failure(let networkError):
                     switch networkError {
                     case .transportError(let error):
-                        judo_log(.error, "Transport error submitting events, retaining events for a subsequent attempt. Reason: %s", error.debugDescription)
+                        judo_log(.error, "Failed to upload events: %s", error.debugDescription)
+                        judo_log(.error, "Will retry failed events")
                     case .serverError(let statusCode, let message):
+                        judo_log(.error, "Failed to upload events: [%d] %s", statusCode, message)
+                        
                         if (400..<500).contains(statusCode) {
-                            judo_log(.error, "Server reports bad request while submitting events, dropping the events. Status code %d, reason: %s", statusCode, message)
-                            self.dropEvents(events: eventsToSend)
+                            judo_log(.error, "Discarding failed events")
+                            self.removeEvents(events)
                         } else {
-                            judo_log(.error, "Temporary server error while submitting events, retaining events for a subsequent attempt. Status code %d, reason: %s", statusCode, message)
+                            judo_log(.error, "Will retry failed events")
                         }
                     case .noData:
-                        judo_log(.error, "Unexpected empty response, dropping the events.")
-                        self.dropEvents(events: eventsToSend)
+                        judo_log(.error, "Failed to upload events: Unexpected empty response")
+                        judo_log(.error, "Discarding failed events")
+                        self.removeEvents(events)
                     }
-                case .success(_):
-                    judo_log(.debug, "Successfully tracked %d events.", eventsToSend.count)
-                    self.dropEvents(events: eventsToSend)
+                case .success:
+                    judo_log(.debug, "Successfully uploaded %d event(s)", events.count)
+                    self.removeEvents(events)
                 }
-                DispatchQueue.main.async {
-                    self.uploadTask = nil
-                }
+                
+                self.uploadTask = nil
+                self.endBackgroundTask()
             }
-            self.uploadTask?.resume()
+            
+            uploadTask.resume()
+            self.uploadTask = uploadTask
         }
     }
     
-    private func dropEvents(events: [ScreenViewedEvent]) {
-        let idsToDrop = Set(events.map(\.id))
-        self.serialQueue.async {
-            self.queue = self.queue.filter { event in
-                !idsToDrop.contains(event.id)
+    private func removeEvents(_ eventsToRemove: [EventPayload]) {
+        serialQueue.addOperation {
+            self.eventQueue = self.eventQueue.filter { event in
+                !eventsToRemove.contains { $0.id == event.id }
             }
+            
+            judo_log(.debug, "Removed %d event(s) from queue – queue now contains %d event(s)", eventsToRemove.count, self.eventQueue.count)
         }
+        
+        persistEvents()
     }
-    
-    struct ScreenViewedEvent: Codable {
-        var id = UUID()
-        var timestamp = Date()
-        var name = "Screen Viewed"
-        var deviceID = UIDevice.current.identifierForVendor
-        var properties: Properties
-        var context: Context = Context()
-        
-        struct Properties: Codable {
-            var experienceID: String
-            var experienceName: String
-            var experienceRevisionID: String
-            var screenID: String
-            var screenName: String?
-            var screenTags: Set<String>
-        }
-        
-        struct Context: Codable {
-            var locale = Locale.current.identifier
-            var os: OS = OS()
+}
 
-            struct OS: Codable {
-                var name = "iOS"
-                var version = UIDevice.current.systemVersion
+// MARK: Timer
+
+extension Analytics {
+    private func startTimer() {
+        self.stopTimer()
+        
+        guard self.flushInterval > 0.0 else {
+            return
+        }
+        
+        self.timer = Timer.scheduledTimer(withTimeInterval: self.flushInterval, repeats: true) { [weak self] _ in
+            self?.flushEvents()
+        }
+    }
+    
+    private func stopTimer() {
+        guard let timer = self.timer else {
+            return
+        }
+        
+        timer.invalidate()
+        self.timer = nil
+    }
+}
+
+// MARK: Background task
+
+extension Analytics {
+    private func beginBackgroundTask() {
+        endBackgroundTask()
+        
+        serialQueue.addOperation {
+            self.backgroundTask = UIApplication.shared.beginBackgroundTask {
+                self.serialQueue.cancelAllOperations()
+                self.endBackgroundTask()
             }
         }
+    }
+    
+    private func endBackgroundTask() {
+        serialQueue.addOperation {
+            if self.backgroundTask != UIBackgroundTaskIdentifier.invalid {
+                let taskIdentifier = UIBackgroundTaskIdentifier(rawValue: self.backgroundTask.rawValue)
+                UIApplication.shared.endBackgroundTask(taskIdentifier)
+                self.backgroundTask = UIBackgroundTaskIdentifier.invalid
+            }
+        }
+    }
+}
+
+private struct Batch: Encodable {
+    var events: [EventPayload]
+    
+    private enum CodingKeys: String, CodingKey {
+        case batch
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(events, forKey: .batch)
     }
 }

@@ -18,13 +18,17 @@ import JudoModel
 
 @available(iOS 13.0, *)
 struct CarouselView: View {
+    @Environment(\.data) private var data
+    @Environment(\.urlParameters) private var urlParameters
+    @Environment(\.userInfo) private var userInfo
+    
     let carousel: Carousel
 
     @EnvironmentObject private var carouselState: CarouselState
 
     var body: some View {
         PageViewController(
-            pages: carousel.children.compactMap { $0 as? Layer }.map { LayerView(layer: $0) },
+            pages: pages,
             loop: carousel.isLoopEnabled,
             currentPage: Binding {
                 carouselState.currentPageForCarousel[carousel.id] ?? 0
@@ -33,10 +37,53 @@ struct CarouselView: View {
             }
         )
     }
+    
+    private var pages: [Page] {
+        let result = carousel.children.flatMap { node -> [Page] in
+            switch node {
+            case let collection as Collection:
+                let items = collection.items(
+                    data: data,
+                    urlParameters: urlParameters,
+                    userInfo: userInfo
+                )
+                
+                return items.flatMap { item in
+                    collection.children.compactMap { child in
+                        guard let layer = child as? Layer else {
+                            return nil
+                        }
+                        
+                        return Page(layer: layer, item: item)
+                    }
+                }
+            case let layer as Layer:
+                return [Page(layer: layer)]
+            default:
+                return []
+            }
+        }
+        
+        return result
+    }
 }
 
 @available(iOS 13.0, *)
-private struct PageViewController<Page: View>: UIViewControllerRepresentable {
+private struct Page: View {
+    var layer: Layer
+    var item: Any?
+    
+    var body: some View {
+        if let item = item {
+            LayerView(layer: layer).environment(\.data, item)
+        } else {
+            LayerView(layer: layer)
+        }
+    }
+}
+
+@available(iOS 13.0, *)
+private struct PageViewController: UIViewControllerRepresentable {
     private let pages: [Page]
     private let loop: Bool
     @Binding private var currentPage: Int
@@ -64,8 +111,19 @@ private struct PageViewController<Page: View>: UIViewControllerRepresentable {
     func updateUIViewController(_ pageViewController: UIPageViewController, context: Context) {
         context.coordinator.parent = self
         context.coordinator.loop = self.loop
-        pageViewController.setViewControllers(
-            [context.coordinator.controllers[currentPage]], direction: .forward, animated: true)
+        
+        if !context.coordinator.controllers.isEmpty {
+            guard context.coordinator.controllers.indices.contains(currentPage) else {
+                assertionFailure("Invalid carousel state")
+                return
+            }
+
+            pageViewController.setViewControllers(
+                [context.coordinator.controllers[currentPage]],
+                direction: .forward,
+                animated: true
+            )
+        }
     }
 
     class Coordinator: NSObject, UIPageViewControllerDataSource, UIPageViewControllerDelegate {

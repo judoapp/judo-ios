@@ -21,20 +21,6 @@ import os.log
 @available(iOS 13.0, *)
 extension Action {
     func handle(experience: Experience, node: Node, screen: Screen, data: Any?, urlParameters: [String: String], userInfo: [String: String], experienceViewController: ExperienceViewController, screenViewController: ScreenViewController) {
-                        
-        NotificationCenter.default.post(
-            name: Judo.didReceiveActionNotification,
-            object: nil,
-            userInfo: [
-                "experience": experience,
-                "screen": screen,
-                "node": node,
-                "data": data as Any,
-                "screenViewController": screenViewController,
-                "experienceViewController": experienceViewController
-            ]
-        )
-        
         switch(self.actionType) {
         case .performSegue:
             guard let screen = self.screen else {

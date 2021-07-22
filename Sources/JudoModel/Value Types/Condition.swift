@@ -15,7 +15,7 @@
 
 import Foundation
 
-public struct Condition {
+public struct Condition: Decodable {
     public enum Predicate: String, Decodable {
         case equals
         case doesNotEqual
@@ -36,49 +36,7 @@ public struct Condition {
         self.predicate = predicate
         self.value = value
     }
-    
-    public func isSatisfied(data: Any?, urlParameters: [String: String], userInfo: [String: String]) -> Bool {
-        let value = JSONSerialization.value(
-            forKeyPath: keyPath,
-            data: data,
-            urlParameters: urlParameters,
-            userInfo: userInfo
-        )
-        
-        switch (predicate, value, self.value) {
-        case (.equals, let a as String, let b as String):
-            return a == b
-        case (.equals, let a as Double, let b as Double):
-            return a == b
-        case (.doesNotEqual, let a as String, let b as String):
-            return a != b
-        case (.doesNotEqual, let a as Double, let b as Double):
-            return a != b
-        case (.isGreaterThan, let a as Double, let b as Double):
-            return a > b
-        case (.isLessThan, let a as Double, let b as Double):
-            return a < b
-        case (.isSet, .some, _):
-            return true
-        case (.isSet, .none, _):
-            return false
-        case (.isNotSet, .some, _):
-            return false
-        case (.isNotSet, .none, _):
-            return true
-        case (.isTrue, let value as Bool, _):
-            return value == true
-        case (.isFalse, let value as Bool, _):
-            return value == false
-        default:
-            return true
-        }
-    }
-}
 
-// MARK: - Decodable
-
-extension Condition: Decodable {
     private enum CodingKeys: String, CodingKey {
         case keyPath
         case predicate
