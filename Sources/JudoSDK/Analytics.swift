@@ -134,21 +134,11 @@ final class Analytics {
         
         persistEvents()
         
-        let onMainThread: (() -> Void) -> Void = { block in
-            if Thread.isMainThread {
-                block()
-            } else {
-                DispatchQueue.main.sync {
-                    block()
-                }
-            }
-        }
-        
-        onMainThread {
+        DispatchQueue.toMain {
             if UIApplication.shared.applicationState == .active {
-                flushEvents(minBatchSize: flushAt)
+                self.flushEvents(minBatchSize: self.flushAt)
             } else {
-                flushEvents()
+                self.flushEvents()
             }
         }
     }
