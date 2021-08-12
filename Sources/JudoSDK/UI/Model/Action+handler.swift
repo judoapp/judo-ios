@@ -20,7 +20,7 @@ import os.log
 
 @available(iOS 13.0, *)
 extension Action {
-    func handle(experience: Experience, node: Node, screen: Screen, data: Any?, urlParameters: [String: String], userInfo: [String: String], experienceViewController: ExperienceViewController, screenViewController: ScreenViewController) {
+    func handle(experience: Experience, node: Node, screen: Screen, data: Any?, urlParameters: [String: String], userInfo: [String: String], authorize: @escaping (inout URLRequest) -> Void, experienceViewController: ExperienceViewController, screenViewController: ScreenViewController) {
         switch(self.actionType) {
         case .performSegue:
             guard let screen = self.screen else {
@@ -29,7 +29,7 @@ extension Action {
             
             switch segueStyle {
             case .modal:
-                let viewController = Judo.sharedInstance.navBarViewController(experience, screen, data, urlParameters, userInfo)
+                let viewController = Judo.sharedInstance.navBarViewController(experience, screen, data, urlParameters, userInfo, authorize)
                 switch modalPresentationStyle {
                 case .sheet:
                     viewController.modalPresentationStyle = .pageSheet
@@ -41,7 +41,7 @@ extension Action {
                 
                 screenViewController.present(viewController, animated: true)
             default:
-                let viewController = Judo.sharedInstance.screenViewController(experience, screen, data, urlParameters, userInfo)
+                let viewController = Judo.sharedInstance.screenViewController(experience, screen, data, urlParameters, userInfo, authorize)
                 screenViewController.show(viewController, sender: screenViewController)
             }
         case .openURL:

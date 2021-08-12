@@ -47,7 +47,6 @@ struct LayerView: View {
             DividerView(divider: divider)
         case let webView as JudoModel.WebView:
             WebViewView(webView: webView)
-                .environment(\.isEnabled, false)
         case let stack as JudoModel.ZStack:
             ZStackView(stack: stack)
         case let carousel as JudoModel.Carousel:

@@ -74,6 +74,11 @@ internal struct UserInfoKey: EnvironmentKey {
 }
 
 @available(iOS 13.0, *)
+internal struct AuthorizeKey: EnvironmentKey {
+    static let defaultValue: (inout URLRequest) -> Void = { _ in }
+}
+
+@available(iOS 13.0, *)
 internal extension EnvironmentValues {
     var experience: Experience? {
         get {
@@ -172,6 +177,16 @@ internal extension EnvironmentValues {
         
         set {
             self[UserInfoKey.self] = newValue
+        }
+    }
+    
+    var authorize: (inout URLRequest) -> Void {
+        get {
+            return self[AuthorizeKey.self]
+        }
+        
+        set {
+            self[AuthorizeKey.self] = newValue
         }
     }
 }

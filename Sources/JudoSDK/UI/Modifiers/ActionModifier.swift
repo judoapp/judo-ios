@@ -29,12 +29,13 @@ struct ActionModifier: ViewModifier {
     @Environment(\.data) private var data
     @Environment(\.urlParameters) private var urlParameters
     @Environment(\.userInfo) private var userInfo
+    @Environment(\.authorize) private var authorize
     
     @ViewBuilder
     func body(content: Content) -> some View {
         if let action = layer.action, let experience = experience, let screen = screen, let experienceViewController = experienceViewController, let screenViewController = screenViewController {
             Button {
-                action.handle(experience: experience, node: layer, screen: screen, data: data, urlParameters: urlParameters, userInfo: userInfo, experienceViewController: experienceViewController, screenViewController: screenViewController)
+                action.handle(experience: experience, node: layer, screen: screen, data: data, urlParameters: urlParameters, userInfo: userInfo, authorize: authorize, experienceViewController: experienceViewController, screenViewController: screenViewController)
             } label: {
                 content
             }

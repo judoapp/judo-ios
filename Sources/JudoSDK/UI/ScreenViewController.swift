@@ -24,16 +24,18 @@ open class ScreenViewController: UIViewController, UIScrollViewDelegate {
     let data: Any?
     let urlParameters: [String: String]
     let userInfo: [String: String]
+    let authorize: (inout URLRequest) -> Void
         
     private let carouselState = CarouselState()
     private var cancellables: Set<AnyCancellable> = []
     
-    public init(experience: Experience, screen: Screen, data: Any? = nil, urlParameters: [String: String], userInfo: [String: String]) {
+    public init(experience: Experience, screen: Screen, data: Any? = nil, urlParameters: [String: String], userInfo: [String: String], authorize: @escaping (inout URLRequest) -> Void) {
         self.experience = experience
         self.screen = screen
         self.data = data
         self.urlParameters = urlParameters
         self.userInfo = userInfo
+        self.authorize = authorize
         super.init(nibName: nil, bundle: nil)
         super.restorationIdentifier = screen.id
     }
@@ -179,6 +181,7 @@ open class ScreenViewController: UIViewController, UIScrollViewDelegate {
                 data: data,
                 urlParameters: urlParameters,
                 userInfo: userInfo,
+                authorize: authorize,
                 experienceViewController: experienceViewController,
                 screenViewController: self
             )
@@ -286,6 +289,7 @@ open class ScreenViewController: UIViewController, UIScrollViewDelegate {
                 .environment(\.stringTable, experience.localization)
                 .environment(\.urlParameters, urlParameters)
                 .environment(\.userInfo, userInfo)
+                .environment(\.authorize, authorize)
         }
     }
     

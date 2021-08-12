@@ -25,7 +25,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var screenViewedObserver: NSObjectProtocol?
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        Judo.initialize(accessToken: "<ACCESS-TOKEN>", domain: "myapp.judo.app")
+        var configuration = Configuration(
+            accessToken: "<ACCESS-TOKEN>",
+            domain: "myapp.judo.app"
+        )
+        
+        configuration.authorize("api.example.com", with: { request in
+            request.setValue("xxx", forHTTPHeaderField: "Example-Token")
+        })
+        
+        Judo.initialize(configuration: configuration)
         Judo.sharedInstance.performSync(prefetchAssets: true)
         Judo.sharedInstance.registerAppRefreshTask(taskIdentifier: "app.judo.background.refresh")
         

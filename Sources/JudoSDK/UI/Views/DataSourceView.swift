@@ -23,6 +23,7 @@ struct DataSourceView: View {
     @Environment(\.data) private var parentData
     @Environment(\.urlParameters) private var urlParameters
     @Environment(\.userInfo) private var userInfo
+    @Environment(\.authorize) private var authorize
     
     @State private var cancellables: Set<AnyCancellable> = []
 
@@ -78,6 +79,7 @@ struct DataSourceView: View {
             return nextResult
         }
         
+        authorize(&request)
         return URLSession.shared.dataPublisher(for: request)
     }
     

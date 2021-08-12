@@ -26,11 +26,26 @@ open class ExperienceViewController: UIViewController {
     ///   - url: Experience URL
     ///   - ignoreCache: Optional. Ignore cached Experience, if any.
     ///   - userInfo: Optional properties about the current user which can be used to personalize the experience.
-    public init(url: URL, userInfo: [String: String] = [:], ignoreCache: Bool = false) {
+    ///   - authorize: Optional callback to authorize URL reqeusts made by `DataSource`s.
+    public init(
+        url: URL,
+        ignoreCache: Bool = false,
+        userInfo: [String: String] = [:],
+        authorize: @escaping (inout URLRequest) -> Void = { _ in }
+    ) {
         super.init(nibName: nil, bundle: nil)
         
-        if #available(iOS 13.0, *), let fetchRequest = FetchRequest(url: url, ignoreCache: ignoreCache, userInfo: userInfo) {
-            fetchExperience(request: fetchRequest)
+        if #available(iOS 13.0, *) {
+            let maybeFetchRequest = FetchRequest(
+                url: url,
+                ignoreCache: ignoreCache,
+                userInfo: userInfo,
+                authorize: authorize
+            )
+            
+            if let fetchRequest = maybeFetchRequest {
+                fetchExperience(request: fetchRequest)
+            }
         }
     }
     
@@ -40,11 +55,27 @@ open class ExperienceViewController: UIViewController {
     ///   - coder: An NSCoder
     ///   - ignoreCache: Optional. Ignore cached Experience, if any.
     ///   - userInfo: Optional properties about the current user which can be used to personalize the experience.
-    public init?(url: URL, coder: NSCoder, userInfo: [String: String] = [:], ignoreCache: Bool = false) {
+    ///   - authorize: Optional callback to authorize URL reqeusts made by `DataSource`s.
+    public init?(
+        url: URL,
+        coder: NSCoder,
+        ignoreCache: Bool = false,
+        userInfo: [String: String] = [:],
+        authorize: @escaping (inout URLRequest) -> Void = { _ in }
+    ) {
         super.init(coder: coder)
         
-        if #available(iOS 13.0, *), let fetchRequest = FetchRequest(url: url, ignoreCache: ignoreCache, userInfo: userInfo) {
-            fetchExperience(request: fetchRequest)
+        if #available(iOS 13.0, *) {
+            let maybeFetchRequest = FetchRequest(
+                url: url,
+                ignoreCache: ignoreCache,
+                userInfo: userInfo,
+                authorize: authorize
+            )
+            
+            if let fetchRequest = maybeFetchRequest {
+                fetchExperience(request: fetchRequest)
+            }
         }
     }
     
@@ -54,18 +85,22 @@ open class ExperienceViewController: UIViewController {
     ///   - screenID: Optional. Override experience's initial screen identifier.
     ///   - urlParameters: Optional parameters from the URL used to launch the experience.
     ///   - userInfo: Optional properties about the current user which can be used to personalize the experience.
+    ///   - authorize: Optional callback to authorize URL reqeusts made by `DataSource`s.
     @available(iOS 13.0, *)
     public init(
         experience: Experience,
         screenID initialScreenID: Screen.ID? = nil,
         urlParameters: [String: String] = [:],
-        userInfo: [String: String] = [:]
+        userInfo: [String: String] = [:],
+        authorize: @escaping (inout URLRequest) -> Void = { _ in }
     ) {
         super.init(nibName: nil, bundle: nil)
+        
         let context = LaunchContext(
             initialScreenID: initialScreenID,
             urlParameters: urlParameters,
-            userInfo: userInfo
+            userInfo: userInfo,
+            authorize: authorize
         )
         
         presentExperience(experience: experience, context: context)
@@ -78,14 +113,23 @@ open class ExperienceViewController: UIViewController {
     ///   - screenID: Optional. Override experience's initial screen identifier.
     ///   - urlParameters: Optional parameters from the URL used to launch the experience.
     ///   - userInfo: Optional properties about the current user which can be used to personalize the experience.
+    ///   - authorize: Optional callback to authorize URL reqeusts made by `DataSource`s.
     @available(iOS 13.0, *)
-    public init?(experience: Experience, coder: NSCoder, screenID initialScreenID: Screen.ID? = nil, urlParameters: [String: String] = [:], userInfo: [String: String] = [:]) {
+    public init?(
+        experience: Experience,
+        coder: NSCoder,
+        screenID initialScreenID: Screen.ID? = nil,
+        urlParameters: [String: String] = [:],
+        userInfo: [String: String] = [:],
+        authorize: @escaping (inout URLRequest) -> Void = { _ in }
+    ) {
         super.init(coder: coder)
         
         let context = LaunchContext(
             initialScreenID: initialScreenID,
             urlParameters: urlParameters,
-            userInfo: userInfo
+            userInfo: userInfo,
+            authorize: authorize
         )
         
         presentExperience(experience: experience, context: context)
@@ -152,12 +196,18 @@ open class ExperienceViewController: UIViewController {
         var ignoreCache: Bool
         var launchContext = LaunchContext()
         
-        init?(url: URL, ignoreCache: Bool, userInfo: [String: String]) {
+        init?(
+            url: URL,
+            ignoreCache: Bool,
+            userInfo: [String: String],
+            authorize: @escaping (inout URLRequest) -> Void
+        ) {
             guard var urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
                 return nil
             }
             
             launchContext.userInfo = userInfo
+            launchContext.authorize = authorize
             
             let queryItems = urlComponents.queryItems
             urlComponents.query = nil
@@ -179,6 +229,7 @@ open class ExperienceViewController: UIViewController {
         var initialScreenID: Screen.ID?
         var urlParameters = [String: String]()
         var userInfo = [String: String]()
+        var authorize: (inout URLRequest) -> Void = { _ in }
     }
     
     @available(iOS 13.0, *)
@@ -240,7 +291,8 @@ open class ExperienceViewController: UIViewController {
             initialScreen,
             nil,
             context.urlParameters,
-            context.userInfo
+            context.userInfo,
+            context.authorize
         )
         
         self.restorationIdentifier = "\(experience.id)"

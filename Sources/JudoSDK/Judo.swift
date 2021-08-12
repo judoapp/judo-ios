@@ -134,12 +134,12 @@ public final class Judo {
     
     /// To customize the Nav Bar View Controller, replace this function reference with a custom one that instantiates your own NavBarViewController subclass.
     @available(iOS 13.0, *)
-    public lazy var navBarViewController: (_ experience: Experience, _ screen: Screen, _ data: Any?, _ urlParameters: [String: String], _ userInfo: [String: String]) -> NavBarViewController =
-        NavBarViewController.init(experience:screen:data:urlParameters:userInfo:)
+    public lazy var navBarViewController: (_ experience: Experience, _ screen: Screen, _ data: Any?, _ urlParameters: [String: String], _ userInfo: [String: String], _ authorize: @escaping (inout URLRequest) -> Void) -> NavBarViewController =
+        NavBarViewController.init(experience:screen:data:urlParameters:userInfo:authorize:)
     
     /// To customize the Screen View Controller, replace this function reference with a custom one that instantiates your own ScreenViewController subclass.
     @available(iOS 13.0, *)
-    public lazy var screenViewController: (_ experience: Experience, _ screen: Screen, _ data: Any?, _ urlParameters: [String: String], _ userInfo: [String: String]) -> ScreenViewController = ScreenViewController.init(experience:screen:data:urlParameters:userInfo:)
+    public lazy var screenViewController: (_ experience: Experience, _ screen: Screen, _ data: Any?, _ urlParameters: [String: String], _ userInfo: [String: String], _ authorize: @escaping (inout URLRequest) -> Void) -> ScreenViewController = ScreenViewController.init(experience:screen:data:urlParameters:userInfo:authorize:)
     
     // MARK: Methods
     
@@ -431,7 +431,11 @@ public final class Judo {
             return false
         }
         
-        let viewController = ExperienceViewController(url: url, userInfo: userInfo)
+        let viewController = ExperienceViewController(
+            url: url,
+            userInfo: userInfo,
+            authorize: authorize
+        )
         
         DispatchQueue.main.async {
             self.configuration.rootViewController()?.present(
@@ -442,6 +446,30 @@ public final class Judo {
         }
         
         return true
+    }
+    
+    func authorize(_ request: inout URLRequest) {
+        guard let host = request.url?.host else {
+            return
+        }
+        
+        let requestTokens = Array(host.split(separator: "."))
+        guard requestTokens.count >= 2 else {
+            return
+        }
+        
+        for authorizer in configuration.authorizers {
+            let wildcardAndRoot = authorizer.pattern.components(separatedBy: "*.")
+            guard let root = wildcardAndRoot.last, wildcardAndRoot.count <= 2 else {
+                break
+            }
+            
+            let hasWildcard = wildcardAndRoot.count > 1
+            
+            if (!hasWildcard && host == authorizer.pattern) || (hasWildcard && (host == root || host.hasSuffix(".\(root)"))) {
+                authorizer.authorize(&request)
+            }
+        }
     }
 }
 

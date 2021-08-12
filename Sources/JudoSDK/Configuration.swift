@@ -46,8 +46,32 @@ public struct Configuration {
         UIApplication.shared.windows.first?.rootViewController
     }
     
+    struct Authorizer {
+        var pattern: String
+        var block: (inout URLRequest) -> Void
+        
+        func authorize(_ request: inout URLRequest) {
+            block(&request)
+        }
+    }
+    
+    var authorizers: [Authorizer]
+    
+    /// Supply the domain name this authorizer matches against including subdomain. You can optionally supply an asterisk for the subdomain if you want to match against all subdomains.
+    public mutating func authorize(_ pattern: String, with block: @escaping (inout URLRequest) -> Void) {
+        authorizers.append(
+            Authorizer(pattern: pattern, block: block)
+        )
+    }
+    
     public init(accessToken: String, domain: String) {
         self.accessToken = accessToken
         self.domain = domain
+        
+        authorizers = [
+            Authorizer(pattern: "data.judo.app") { request in
+                request.setValue(accessToken, forHTTPHeaderField: "Judo-Access-Token")
+            }
+        ]
     }
 }

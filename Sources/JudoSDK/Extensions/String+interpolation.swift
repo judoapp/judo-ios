@@ -100,16 +100,20 @@ extension String {
                 throw StringExpressionError("Expected 3 arguments")
             }
             
-            guard let value = try stringValue(keyPath: arguments[1]) else {
+            guard var dateString = try stringValue(keyPath: arguments[1]) else {
                 throw StringExpressionError("Invalid argument")
             }
             
             // Remove milliseconds
-            let dateString = value.replacingOccurrences(
+            dateString = dateString.replacingOccurrences(
                 of: "\\.\\d+",
                 with: "",
                 options: .regularExpression
             )
+            
+            // Some responses use a space as a separator between the date and
+            // time instead of the letter T
+            dateString = dateString.replacingOccurrences(of: " ", with: "T")
             
             let dateCreator = dateString.containsTimeZone
                 ? defaultDateCreator

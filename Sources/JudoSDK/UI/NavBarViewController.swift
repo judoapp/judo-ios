@@ -21,8 +21,8 @@ import SwiftUI
 open class NavBarViewController: UINavigationController, UIScrollViewDelegate {
     private var cancellables = Set<AnyCancellable>()
     
-    public init(experience: Experience, screen: Screen, data: Any? = nil, urlParameters: [String: String], userInfo: [String: String]) {
-        let screenVC = Judo.sharedInstance.screenViewController(experience, screen, data, urlParameters, userInfo)
+    public init(experience: Experience, screen: Screen, data: Any? = nil, urlParameters: [String: String], userInfo: [String: String], authorize: @escaping (inout URLRequest) -> Void) {
+        let screenVC = Judo.sharedInstance.screenViewController(experience, screen, data, urlParameters, userInfo, authorize)
         super.init(rootViewController: screenVC)
         restorationIdentifier = screen.id
         

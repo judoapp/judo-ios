@@ -22,7 +22,7 @@ final class JudoServiceTest: XCTestCase {
     
     override func setUp() {
         // this is an unclean approach to global state and dependencies, but it keeps things simple in the SDK code proper.
-        Judo.initialize(accessToken: "testsuite", domains: "sdktest.judo.app")
+        Judo.initialize(accessToken: "testsuite", domain: "sdktest.judo.app")
         Judo.userDefaults.removeObject(forKey: "sdktest.judo.app-SyncToken")
     }
 
