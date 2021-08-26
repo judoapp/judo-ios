@@ -18,6 +18,7 @@ import JudoModel
 
 @available(iOS 13.0, *)
 struct PageControlView: View {
+    @Environment(\.collectionIndex) private var collectionIndex
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.data) private var data
     @Environment(\.urlParameters) private var urlParameters
@@ -31,13 +32,7 @@ struct PageControlView: View {
             RealizeColor(currentColor) { currentColor in
                 PageControlViewBody(
                     numberOfPages: numberOfPages,
-                    currentPage: Binding {
-                        carouselState.currentPageForCarousel[pageControl.carousel?.id ?? ""] ?? 0
-                    } set: { pageIndex in
-                        if let id = pageControl.carousel?.id {
-                            carouselState.currentPageForCarousel[id] = pageIndex
-                        }
-                    },
+                    currentPage: currentPage,
                     hidesForSinglePage: pageControl.hidesForSinglePage,
                     normalColor: normalColor,
                     currentColor: currentColor,
@@ -45,6 +40,19 @@ struct PageControlView: View {
                     currentImage: currentImage
                 )
             }
+        }
+    }
+    
+    private var currentPage: Binding<Int> {
+        guard let carousel = pageControl.carousel else {
+            return .constant(0)
+        }
+        
+        let viewID = ViewID(nodeID: carousel.id, collectionIndex: collectionIndex)
+        return Binding {
+            carouselState.currentPageForCarousel[viewID] ?? 0
+        } set: { newValue in
+            carouselState.currentPageForCarousel[viewID] = newValue
         }
     }
     

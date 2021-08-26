@@ -195,7 +195,7 @@ enum BuildEnvironment: String, Codable {
             return
         }
         
-        self = .init(rawValue: apsEnvironment.uppercased()) ?? .production
+        self = BuildEnvironment.init(rawValue: apsEnvironment.uppercased()) ?? .production
         #endif
     }
 }

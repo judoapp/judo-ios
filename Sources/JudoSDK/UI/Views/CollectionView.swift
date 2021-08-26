@@ -25,9 +25,11 @@ struct CollectionView: View {
 
     var body: some View {
         if let items = items {
-            ForEach(Array(zip(items.indices, items)), id: \.0) { _, item in
+            ForEach(Array(zip(items.indices, items)), id: \.0) { index, item in
                 ForEach(layers) { layer in
-                    LayerView(layer: layer).environment(\.data, item)
+                    LayerView(layer: layer)
+                        .environment(\.collectionIndex, index)
+                        .environment(\.data, item)
                 }
             }
         }

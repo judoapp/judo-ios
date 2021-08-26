@@ -69,7 +69,9 @@ extension Collection {
         }
         
         if let limit = limit {
-            let limitedRange = result.indices.clamped(to: (limit.startAt - 1)..<result.endIndex)
+            let startAt = max(limit.startAt - 1, 0)
+            let lowerBound = min(startAt, result.indices.upperBound)
+            let limitedRange = result.indices.clamped(to: lowerBound..<result.endIndex)
             result = Array(result[limitedRange])
         }
         

@@ -17,7 +17,13 @@ import Foundation
 
 // Reusable formatters since instantiating them is an expensive operation
 private let dateFormatter = DateFormatter()
-private let numberFormatter = NumberFormatter()
+
+private let numberFormatter: NumberFormatter = {
+    let numberFormatter = NumberFormatter()
+    numberFormatter.numberStyle = .decimal
+    return numberFormatter
+}()
+
 private let defaultDateCreator = ISO8601DateFormatter()
 
 // Use the local variant when the date string omits time zone
@@ -59,7 +65,7 @@ extension String {
     }
     
     private static func evaluate(expression: String, data: Any?, urlParameters: [String: String], userInfo: [String: String]) throws -> String {
-        let regex = try! NSRegularExpression(pattern: "\"(.*)\"|([\\w\\d\\.\\-]+)")
+        let regex = try! NSRegularExpression(pattern: "\"([^\"]*)\"|([\\w\\d\\.\\-]+)")
         let range = NSRange(location: 0, length: expression.utf16.count)
         let arguments = regex.matches(in: expression, range: range).map { match -> String in
             if let range = Range(match.range(at: 1), in: expression) {
@@ -159,6 +165,25 @@ extension String {
             return value.uppercased()
         }
         
+        let replaceHelper: Helper = { arguments in
+            guard arguments.first == "replace" else {
+                return nil
+            }
+            
+            guard arguments.count == 4 else {
+                throw StringExpressionError("Expected 4 arguments")
+            }
+            
+            guard let value = try stringValue(keyPath: arguments[1]) else {
+                throw StringExpressionError("Invalid argument")
+            }
+            
+            return value.replacingOccurrences(
+                of: arguments[2],
+                with: arguments[3]
+            )
+        }
+        
         let echoHelper: Helper = { arguments in
             guard arguments.count == 1 else {
                 return nil
@@ -171,6 +196,7 @@ extension String {
             dateHelper,
             lowercaseHelper,
             uppercaseHelper,
+            replaceHelper,
             echoHelper
         ]
         

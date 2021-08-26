@@ -18,6 +18,7 @@ import JudoModel
 
 @available(iOS 13.0, *)
 struct CarouselView: View {
+    @Environment(\.collectionIndex) private var collectionIndex
     @Environment(\.data) private var data
     @Environment(\.urlParameters) private var urlParameters
     @Environment(\.userInfo) private var userInfo
@@ -30,12 +31,17 @@ struct CarouselView: View {
         PageViewController(
             pages: pages,
             loop: carousel.isLoopEnabled,
-            currentPage: Binding {
-                carouselState.currentPageForCarousel[carousel.id] ?? 0
-            } set: { index in
-                carouselState.currentPageForCarousel[carousel.id] = index
-            }
+            currentPage: currentPage
         )
+    }
+    
+    private var currentPage: Binding<Int> {
+        let viewID = ViewID(nodeID: carousel.id, collectionIndex: collectionIndex)
+        return Binding {
+            carouselState.currentPageForCarousel[viewID] ?? 0
+        } set: { newValue in
+            carouselState.currentPageForCarousel[viewID] = newValue
+        }
     }
     
     private var pages: [Page] {

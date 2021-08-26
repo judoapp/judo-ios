@@ -79,6 +79,11 @@ internal struct AuthorizeKey: EnvironmentKey {
 }
 
 @available(iOS 13.0, *)
+internal struct CollectionIndexKey: EnvironmentKey {
+    static var defaultValue = 0
+}
+
+@available(iOS 13.0, *)
 internal extension EnvironmentValues {
     var experience: Experience? {
         get {
@@ -187,6 +192,16 @@ internal extension EnvironmentValues {
         
         set {
             self[AuthorizeKey.self] = newValue
+        }
+    }
+    
+    var collectionIndex: Int {
+        get {
+            return self[CollectionIndexKey.self]
+        }
+        
+        set {
+            self[CollectionIndexKey.self] = newValue
         }
     }
 }
