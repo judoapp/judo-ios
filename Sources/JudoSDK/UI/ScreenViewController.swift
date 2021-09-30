@@ -23,13 +23,13 @@ open class ScreenViewController: UIViewController, UIScrollViewDelegate {
     let screen: Screen
     let data: Any?
     let urlParameters: [String: String]
-    let userInfo: [String: String]
+    let userInfo: [String: Any]
     let authorize: (inout URLRequest) -> Void
         
     private let carouselState = CarouselState()
     private var cancellables: Set<AnyCancellable> = []
     
-    public init(experience: Experience, screen: Screen, data: Any? = nil, urlParameters: [String: String], userInfo: [String: String], authorize: @escaping (inout URLRequest) -> Void) {
+    public init(experience: Experience, screen: Screen, data: Any? = nil, urlParameters: [String: String], userInfo: [String: Any], authorize: @escaping (inout URLRequest) -> Void) {
         self.experience = experience
         self.screen = screen
         self.data = data

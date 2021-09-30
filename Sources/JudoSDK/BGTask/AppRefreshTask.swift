@@ -37,7 +37,7 @@ enum AppRefreshTask {
         scheduleJudoRefresh(taskIdentifier: task.identifier, timeInterval: timeInterval)
         
         DispatchQueue.main.async {
-            Judo.sharedInstance.performSync(prefetchAssets: true) {
+            Judo.sharedInstance.performSync {
                 task.setTaskCompleted(success: true)
             }
         }

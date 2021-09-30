@@ -83,7 +83,7 @@ extension UINavigationBar {
 
 @available(iOS 13.0, *)
 extension UINavigationItem {
-    func configure(navBar: NavBar, stringTable: StringTable, data: Any?, urlParameters: [String: String], userInfo: [String: String], traits: UITraitCollection, buttonHandler: @escaping (NavBarButton) -> Void) {
+    func configure(navBar: NavBar, stringTable: StringTable, data: Any?, urlParameters: [String: String], userInfo: [String: Any], traits: UITraitCollection, buttonHandler: @escaping (NavBarButton) -> Void) {
 
         title = stringTable.resolve(key: navBar.title).evaluatingExpressions(data: data, urlParameters: urlParameters, userInfo: userInfo)
 
@@ -236,7 +236,7 @@ private extension UIBarButtonItem {
         }
     }
 
-    convenience init(navBarButton: NavBarButton, stringTable: StringTable, data: Any?, urlParameters: [String: String], userInfo: [String: String], onTap: @escaping () -> Void) {
+    convenience init(navBarButton: NavBarButton, stringTable: StringTable, data: Any?, urlParameters: [String: String], userInfo: [String: Any], onTap: @escaping () -> Void) {
         switch navBarButton.style {
         case .close:
             self.init(

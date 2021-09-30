@@ -24,27 +24,64 @@ extension JSONSerialization {
     /// - Returns: The value defined at the supplied key path where `data` refers to the JSON
     /// data, `url` refers to the document's `urlParameters` and `user` refers to the document's
     /// `userInfo`. If there is no value at the specified `keyPath`, nil is returned.
-    public static func value(forKeyPath keyPath: String, data: Any?, urlParameters: [String: String], userInfo: [String: String]) -> Any? {
-        let tokens = keyPath.split(separator: ".").map { String($0) }
-        if tokens.isEmpty {
-            return nil
-        }
-        
+    public static func value(forKeyPath keyPath: String, data: Any?, urlParameters: [String: String], userInfo: [String: Any]) -> Any? {
         var object: [String: Any] = [
-            "url": urlParameters,
-            "user": userInfo
+            "url": urlParameters.reduce(into: [:]) {
+                $0[$1.0] = $1.1
+            },
+            "user": userInfo.reduce(into: [:]) {
+                $0[$1.0] = $1.1
+            }
         ]
         
         if let data = data {
             object["data"] = data
         }
         
-        return tokens.reduce(object as Any?) { result, token in
-            guard let result = result as? [String: Any] else {
-                return nil
-            }
-            
-            return result[token]
+        var result: Any? = object
+        
+        // The following code traverses through the `result` object by applying
+        // the `keyPath` which is a string comprised of object keys separated by
+        // the dot character. The `keyPath` is first split into tokens, however
+        // a token is not necessarily equal to a key because we can not
+        // guarantee that a key does not contain the dot character itself.
+        //
+        // E.g. consider the following JSON object:
+        //
+        // ```
+        // {
+        //   "foo": {
+        //     "bar.baz": true
+        //   }
+        // }
+        // ```
+        //
+        // To access the boolean value, this method would be called with the
+        // `keyPath` value of "foo.bar.baz" which results in three tokens but
+        // must be processed as two keys: "foo" and "bar.baz".
+        //
+        // To achieve this we attempt to construct a key by popping values from
+        // the list of tokens until we find a valid key. If no valid key can be
+        // constructed before we run out of tokens, nil is returned.
+        
+        var tokens = keyPath.split(separator: ".").map { String($0) }
+        
+        if tokens.isEmpty {
+            return nil
         }
+        
+        outer: while !tokens.isEmpty, let object = result as? [String: Any] {
+            var paths = [String]()
+            while !tokens.isEmpty {
+                paths.append(tokens.removeFirst())
+                let key = paths.joined(separator: ".")
+                if let nextResult = object[key] {
+                    result = nextResult
+                    continue outer
+                }
+            }
+        }
+        
+        return result
     }
 }

@@ -20,7 +20,7 @@ import os.log
 
 @available(iOS 13.0, *)
 extension Action {
-    func handle(experience: Experience, node: Node, screen: Screen, data: Any?, urlParameters: [String: String], userInfo: [String: String], authorize: @escaping (inout URLRequest) -> Void, experienceViewController: ExperienceViewController, screenViewController: ScreenViewController) {
+    func handle(experience: Experience, node: Node, screen: Screen, data: Any?, urlParameters: [String: String], userInfo: [String: Any], authorize: @escaping (inout URLRequest) -> Void, experienceViewController: ExperienceViewController, screenViewController: ScreenViewController) {
         switch(self.actionType) {
         case .performSegue:
             guard let screen = self.screen else {

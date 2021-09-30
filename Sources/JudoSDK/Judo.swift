@@ -134,41 +134,43 @@ public final class Judo {
     
     /// To customize the Nav Bar View Controller, replace this function reference with a custom one that instantiates your own NavBarViewController subclass.
     @available(iOS 13.0, *)
-    public lazy var navBarViewController: (_ experience: Experience, _ screen: Screen, _ data: Any?, _ urlParameters: [String: String], _ userInfo: [String: String], _ authorize: @escaping (inout URLRequest) -> Void) -> NavBarViewController =
+    public lazy var navBarViewController: (_ experience: Experience, _ screen: Screen, _ data: Any?, _ urlParameters: [String: String], _ userInfo: [String: Any], _ authorize: @escaping (inout URLRequest) -> Void) -> NavBarViewController =
         NavBarViewController.init(experience:screen:data:urlParameters:userInfo:authorize:)
     
     /// To customize the Screen View Controller, replace this function reference with a custom one that instantiates your own ScreenViewController subclass.
     @available(iOS 13.0, *)
-    public lazy var screenViewController: (_ experience: Experience, _ screen: Screen, _ data: Any?, _ urlParameters: [String: String], _ userInfo: [String: String], _ authorize: @escaping (inout URLRequest) -> Void) -> ScreenViewController = ScreenViewController.init(experience:screen:data:urlParameters:userInfo:authorize:)
+    public lazy var screenViewController: (_ experience: Experience, _ screen: Screen, _ data: Any?, _ urlParameters: [String: String], _ userInfo: [String: Any], _ authorize: @escaping (inout URLRequest) -> Void) -> ScreenViewController = ScreenViewController.init(experience:screen:data:urlParameters:userInfo:authorize:)
     
     // MARK: Methods
     
+    @available(*, deprecated, message: "Manually pre-fetching assets is no longer supported")
+    public func performSync(prefetchAssets: Bool, completion: (() -> Void)? = nil) {
+        performSync(completion: completion)
+    }
+    
     /// Call this method to instruct Judo to (asynchronously) perform a sync.
     /// - Parameters:
-    ///   - prefetchAssets: Whether asynchronously prefetch assets found in synced Experiences.
     ///   - completion: Completion handler.
-    public func performSync(prefetchAssets: Bool = false, completion: (() -> Void)? = nil) {
+    public func performSync(completion: (() -> Void)? = nil) {
         if #available(iOS 13.0, *) {
             repository.syncService.sync {
-                if prefetchAssets {
-                    self.prefetchAssets() {
-                        completion?()
-                    }
-                } else {
-                    completion?()
-                }
+                completion?()
             }
         } else {
             judo_log(.debug, "Judo runs in skeleton mode on iOS <13, ignoring sync request.")
         }
     }
-
-    private let prefetchQueue = DispatchQueue(label: "app.judo.prefetch-assets")
-
-    /// Asynchronously prefetch (download) assets found in the Experiences fetched from the account.
-    /// - Parameter completion: Completion handler.
     
+    @available(*, deprecated, message: "Manually pre-fetching assets is no longer supported")
     public func prefetchAssets(completion: (() -> Void)? = nil) {
+        completion?()
+    }
+    
+    private let prefetchQueue = DispatchQueue(label: "app.judo.prefetch-assets")
+    
+    // This method is no-longer in-use but remains for a future implementation
+    // of pre-fetching assets.
+    private func __prefetchAssets(completion: (() -> Void)? = nil) {
         // Gather image URLs from known (at least expected)
         // urls (Images) and enqueue to download with low priority
         
@@ -258,7 +260,7 @@ public final class Judo {
             return
         }
 
-        performSync(prefetchAssets: true) {
+        performSync {
             completionHandler(.newData)
         }
     }
@@ -299,9 +301,20 @@ public final class Judo {
         Judo.userDefaults.string(forKey: "deviceToken")
     }
     
+    /// The last sent push token is stored in memory to ensure that we send no duplicate register events within a single app session, particularly helpful if developers frequently request the push token from iOS.
+    ///
+    /// NB this is done in lieu of checking if `deviceToken` has changed to ensure that at least one (even if duplicate) `register` event goes out per app session.
+    private var lastSentToken: String?
+    
     public func registeredForRemoteNotifications(deviceToken: Data) {
         let hexValue = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
+        
         Judo.userDefaults.setValue(hexValue, forKey: "deviceToken")
+        
+        guard lastSentToken != hexValue else {
+            return
+        }
+        lastSentToken = hexValue
         
         switch configuration.analyticsMode {
         case .default, .anonymous, .minimal:
@@ -336,18 +349,21 @@ public final class Judo {
         return try? JSONDecoder().decode(JSON.self, from: data)
     }
     
-    public func identify<T: Codable>(userID: String? = nil, traits: T? = nil) {
+    public func identify(userID: String? = nil) {
+        let emptyTraits: [String: String] = [:]
+        identify(userID: userID, traits: emptyTraits)
+    }
+    
+    public func identify<T: Codable>(userID: String? = nil, traits: T) {
         if let userID = userID {
             Judo.userDefaults.setValue(userID, forKey: "userID")
         }
         
-        if let traits = traits {
-            do {
-                let data = try JSONEncoder().encode(traits)
-                Judo.userDefaults.setValue(data, forKey: "traits")
-            } catch {
-                judo_log(.error, "Failed to encode traits")
-            }
+        do {
+            let data = try JSONEncoder().encode(traits)
+            Judo.userDefaults.setValue(data, forKey: "traits")
+        } catch {
+            judo_log(.error, "Failed to encode traits")
         }
         
         switch configuration.analyticsMode {
@@ -388,16 +404,8 @@ public final class Judo {
     
     // MARK: Presentation
     
-    public var userInfo: [String: String] {
-        var result = [String: String]()
-        
-        if case .object(let object) = traits {
-            object.forEach { element in
-                if case .string(let value) = element.value {
-                    result[element.key] = value
-                }
-            }
-        }
+    public var userInfo: [String: Any] {
+        var result = traits?.dictionaryValue ?? [String: Any]()
         
         result["anonymousID"] = anonymousID
         
@@ -438,7 +446,7 @@ public final class Judo {
         )
         
         DispatchQueue.main.async {
-            self.configuration.rootViewController()?.present(
+            self.configuration.viewControllerForPresenting()?.present(
                 viewController,
                 animated: animated,
                 completion: nil

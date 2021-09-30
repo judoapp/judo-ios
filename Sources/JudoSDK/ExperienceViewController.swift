@@ -30,7 +30,7 @@ open class ExperienceViewController: UIViewController {
     public init(
         url: URL,
         ignoreCache: Bool = false,
-        userInfo: [String: String] = [:],
+        userInfo: [String: Any] = [:],
         authorize: @escaping (inout URLRequest) -> Void = { _ in }
     ) {
         super.init(nibName: nil, bundle: nil)
@@ -60,7 +60,7 @@ open class ExperienceViewController: UIViewController {
         url: URL,
         coder: NSCoder,
         ignoreCache: Bool = false,
-        userInfo: [String: String] = [:],
+        userInfo: [String: Any] = [:],
         authorize: @escaping (inout URLRequest) -> Void = { _ in }
     ) {
         super.init(coder: coder)
@@ -91,7 +91,7 @@ open class ExperienceViewController: UIViewController {
         experience: Experience,
         screenID initialScreenID: Screen.ID? = nil,
         urlParameters: [String: String] = [:],
-        userInfo: [String: String] = [:],
+        userInfo: [String: Any] = [:],
         authorize: @escaping (inout URLRequest) -> Void = { _ in }
     ) {
         super.init(nibName: nil, bundle: nil)
@@ -120,7 +120,7 @@ open class ExperienceViewController: UIViewController {
         coder: NSCoder,
         screenID initialScreenID: Screen.ID? = nil,
         urlParameters: [String: String] = [:],
-        userInfo: [String: String] = [:],
+        userInfo: [String: Any] = [:],
         authorize: @escaping (inout URLRequest) -> Void = { _ in }
     ) {
         super.init(coder: coder)
@@ -199,7 +199,7 @@ open class ExperienceViewController: UIViewController {
         init?(
             url: URL,
             ignoreCache: Bool,
-            userInfo: [String: String],
+            userInfo: [String: Any],
             authorize: @escaping (inout URLRequest) -> Void
         ) {
             guard var urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
@@ -228,7 +228,7 @@ open class ExperienceViewController: UIViewController {
     private struct LaunchContext {
         var initialScreenID: Screen.ID?
         var urlParameters = [String: String]()
-        var userInfo = [String: String]()
+        var userInfo = [String: Any]()
         var authorize: (inout URLRequest) -> Void = { _ in }
     }
     
@@ -281,7 +281,8 @@ open class ExperienceViewController: UIViewController {
                 do {
                     try self.registerFontIfNeeded(data: result.get())
                 } catch {
-                    judo_log(.error, "Experience Font: ", error.localizedDescription)
+                    judo_log(.error, "Failed to decode presumably corrupted cached font data. Removing it to allow for re-fetch. Error: %s", error.debugDescription)
+                    Judo.sharedInstance.urlCache.removeCachedResponse(for: URLRequest(url: url))
                 }
             }
         }

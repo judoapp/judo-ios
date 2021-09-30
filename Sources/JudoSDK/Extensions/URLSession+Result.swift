@@ -76,18 +76,26 @@ extension URLSession {
     func downloadTask(with request: URLRequest, completionHandler: @escaping (Result<FileURL, NetworkError>) -> Void) -> URLSessionDownloadTask {
         downloadTask(with: request) { (fileURL, response, error) in
             if let error = error {
+                self.configuration.urlCache?.removeCachedResponse(for: request)
                 completionHandler(.failure(.transportError(error)))
                 return
             }
 
             if let response = response as? HTTPURLResponse, !(200...299).contains(response.statusCode) {
+                self.configuration.urlCache?.removeCachedResponse(for: request)
                 completionHandler(.failure(.serverError(statusCode: response.statusCode, message: "<none>")))
                 return
             }
 
             guard let fileURL = fileURL else {
+                self.configuration.urlCache?.removeCachedResponse(for: request)
                 completionHandler(.failure(.noData))
                 return
+            }
+
+            // download tasks don’t automatically store the result in the cache
+            if let response = response, let data = try? Data(contentsOf: fileURL) {
+                self.configuration.urlCache?.storeCachedResponse(CachedURLResponse(response: response, data: data), for: request)
             }
 
             completionHandler(.success(fileURL))

@@ -37,7 +37,7 @@ private let localDateCreator: ISO8601DateFormatter = {
 private typealias Helper = ([String]) throws -> String?
 
 extension String {
-    func evaluatingExpressions(data: Any?, urlParameters: [String: String], userInfo: [String: String]) -> String? {
+    func evaluatingExpressions(data: Any?, urlParameters: [String: String], userInfo: [String: Any]) -> String? {
         do {
             var result = self
             try result.evaluateExpressions(data: data, urlParameters: urlParameters, userInfo: userInfo)
@@ -48,7 +48,7 @@ extension String {
         }
     }
     
-    mutating func evaluateExpressions(data: Any?, urlParameters: [String: String], userInfo: [String: String]) throws {
+    mutating func evaluateExpressions(data: Any?, urlParameters: [String: String], userInfo: [String: Any]) throws {
         func nextMatch() -> NSTextCheckingResult? {
             let range = NSRange(location: 0, length: self.utf16.count)
             let regex = try! NSRegularExpression(pattern: "\\{\\{(.*?)\\}\\}")
@@ -64,8 +64,8 @@ extension String {
         }
     }
     
-    private static func evaluate(expression: String, data: Any?, urlParameters: [String: String], userInfo: [String: String]) throws -> String {
-        let regex = try! NSRegularExpression(pattern: "\"([^\"]*)\"|([\\w\\d\\.\\-]+)")
+    private static func evaluate(expression: String, data: Any?, urlParameters: [String: String], userInfo: [String: Any]) throws -> String {
+        let regex = try! NSRegularExpression(pattern: "\"([^\"]*)\"|([^\\s]+)")
         let range = NSRange(location: 0, length: expression.utf16.count)
         let arguments = regex.matches(in: expression, range: range).map { match -> String in
             if let range = Range(match.range(at: 1), in: expression) {

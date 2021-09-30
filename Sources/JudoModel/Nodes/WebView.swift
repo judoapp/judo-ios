@@ -17,11 +17,16 @@ import SwiftUI
 
 @available(iOS 13.0, *)
 public final class WebView: Layer {
-    public let url: String
+    public enum Source: Equatable {
+        case url(String)
+        case html(String)
+    }
+    
+    public let source: Source
     public let isScrollEnabled: Bool
     
-    public init(id: String = UUID().uuidString, name: String?, parent: Node? = nil, children: [Node] = [], ignoresSafeArea: Set<Edge>? = nil, aspectRatio: CGFloat? = nil, padding: Padding? = nil, frame: Frame? = nil, layoutPriority: CGFloat? = nil, offset: CGPoint? = nil, shadow: Shadow? = nil, opacity: CGFloat? = nil, background: Background? = nil, overlay: Overlay? = nil, mask: Node? = nil, action: Action? = nil, accessibility: Accessibility? = nil, metadata: Metadata? = nil, url: String, isScrollEnabled: Bool) {
-        self.url = url
+    public init(id: String = UUID().uuidString, name: String?, parent: Node? = nil, children: [Node] = [], ignoresSafeArea: Set<Edge>? = nil, aspectRatio: CGFloat? = nil, padding: Padding? = nil, frame: Frame? = nil, layoutPriority: CGFloat? = nil, offset: CGPoint? = nil, shadow: Shadow? = nil, opacity: CGFloat? = nil, background: Background? = nil, overlay: Overlay? = nil, mask: Node? = nil, action: Action? = nil, accessibility: Accessibility? = nil, metadata: Metadata? = nil, source: Source, isScrollEnabled: Bool) {
+        self.source = source
         self.isScrollEnabled = isScrollEnabled
         super.init(id: id, name: name, parent: parent, children: children, ignoresSafeArea: ignoresSafeArea, aspectRatio: aspectRatio, padding: padding, frame: frame, layoutPriority: layoutPriority, offset: offset, shadow: shadow, opacity: opacity, background: background, overlay: overlay, mask: mask, action: action, accessibility: accessibility, metadata: metadata)
     }
@@ -29,15 +34,41 @@ public final class WebView: Layer {
     // MARK: Decodable
 
     private enum CodingKeys: String, CodingKey {
-        case url
+        case source
         case isScrollEnabled
     }
 
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        url = try container.decode(String.self, forKey: .url)
+        source = try container.decode(Source.self, forKey: .source)
         isScrollEnabled = try container.decode(Bool.self, forKey: .isScrollEnabled)
 
         try super.init(from: decoder)
+    }
+}
+
+@available(iOS 13.0, *)
+extension WebView.Source: Decodable {
+    private enum CodingKeys: String, CodingKey {
+        case typeName = "__typeName"
+        case value
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let typeName = try container.decode(String.self, forKey: .typeName)
+        let value = try container.decode(String.self, forKey: .value)
+        switch typeName {
+        case "WebViewURLSource":
+            self = .url(value)
+        case "WebViewHTMLSource":
+            self = .html(value)
+        default:
+            throw DecodingError.dataCorruptedError(
+                forKey: .typeName,
+                in: container,
+                debugDescription: "Invalid value: \(typeName)"
+            )
+        }
     }
 }

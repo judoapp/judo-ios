@@ -29,18 +29,47 @@ struct WebViewView: View {
     @State private var loadErrorMessage: String?
 
     var body: some View {
-        if let urlString = webView.url.evaluatingExpressions(data: data, urlParameters: urlParameters, userInfo: userInfo), let resolvedURL = URL(string: urlString) {
+        if let source = source {
             if let message = loadErrorMessage {
-                webViewUI(resolvedURL: resolvedURL).loadError(message: message)
+                webViewUI(source: source).loadError(message: message)
             } else {
-                webViewUI(resolvedURL: resolvedURL)
+                webViewUI(source: source)
             }
         }
     }
     
-    private func webViewUI(resolvedURL: URL) -> WebViewUI {
+    private var source: WebView.Source? {
+        switch webView.source {
+        case .url(let value):
+            let maybeValue = value.evaluatingExpressions(
+                data: data,
+                urlParameters: urlParameters,
+                userInfo: userInfo
+            )
+                
+            guard let value = maybeValue else {
+                return nil
+            }
+            
+            return .url(value)
+        case .html(let value):
+            let maybeValue = value.evaluatingExpressions(
+                data: data,
+                urlParameters: urlParameters,
+                userInfo: userInfo
+            )
+                
+            guard let value = maybeValue else {
+                return nil
+            }
+            
+            return .html(value)
+        }
+    }
+    
+    private func webViewUI(source: WebView.Source) -> WebViewUI {
         WebViewUI(
-            url: resolvedURL,
+            source: source,
             isScrollEnabled: webView.isScrollEnabled,
             isUserInteractionEnabled: isEnabled,
             onFinish: { self.loadErrorMessage = nil },
@@ -53,7 +82,7 @@ struct WebViewView: View {
 
 @available(iOS 13.0, *)
 private struct WebViewUI: UIViewRepresentable {
-    var url: URL
+    var source: WebView.Source
     var isScrollEnabled: Bool
     var isUserInteractionEnabled: Bool
 
@@ -64,7 +93,7 @@ private struct WebViewUI: UIViewRepresentable {
     private static let userAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 13_4_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.1 Mobile/15E148 Safari/604.1"
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(self, lastURL: url)
+        Coordinator(self)
     }
 
     func makeUIView(context: Context) -> WKWebView  {
@@ -94,10 +123,6 @@ private struct WebViewUI: UIViewRepresentable {
         webView.scrollView.backgroundColor = webView.backgroundColor
 
         webView.isUserInteractionEnabled = isUserInteractionEnabled
-
-        webView.load(URLRequest(url: url))
-        context.coordinator.requestedURL = self.url
-
         return webView
     }
 
@@ -107,12 +132,19 @@ private struct WebViewUI: UIViewRepresentable {
         // about whether URL changed. In that case, trigger loading new URL
         // by WebView
 
-        guard context.coordinator.requestedURL != url else {
+        guard context.coordinator.source != source else {
             return
         }
 
-        webView.load(URLRequest(url: url))
-        context.coordinator.requestedURL = self.url
+        switch source {
+        case .url(let value):
+            let url = URL(string: value) ?? URL(string: "about:blank")!
+            webView.load(URLRequest(url: url))
+        case .html(let value):
+            webView.loadHTMLString(value, baseURL: nil)
+        }
+        
+        context.coordinator.source = source
     }
 
     static func dismantleUIView(_ webView: WKWebView, coordinator: Coordinator) {
@@ -121,11 +153,10 @@ private struct WebViewUI: UIViewRepresentable {
 
     class Coordinator : NSObject, WKNavigationDelegate {
         var parent: WebViewUI
-        var requestedURL: URL
+        var source: WebView.Source?
 
-        init(_ webView: WebViewUI, lastURL: URL) {
+        init(_ webView: WebViewUI) {
             self.parent = webView
-            self.requestedURL = lastURL
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation?) {

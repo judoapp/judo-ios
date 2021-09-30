@@ -267,7 +267,8 @@ private final class Images: ObservableObject {
     private var data: Any?
     private var colorScheme: ColorScheme?
     private var urlParameters: [String: String] = [:]
-    private var userInfo: [String: String] = [:]
+        
+    private var userInfo: [String: Any] = [:]
 
     @Published var normalUIImage: UIImage?
     @Published var currentUIImage: UIImage?
@@ -277,8 +278,12 @@ private final class Images: ObservableObject {
         self.currentImage = currentImage
     }
 
-    func fetchImages(data: Any?, colorScheme: ColorScheme, urlParameters: [String: String], userInfo: [String: String]) {
-        guard self.colorScheme != colorScheme || self.urlParameters != urlParameters, self.userInfo != userInfo else {
+    func fetchImages(data: Any?, colorScheme: ColorScheme, urlParameters: [String: String], userInfo: [String: Any]) {
+        // we need Equatable to do the comparison so re-wrap in JSON.
+        let currentUserInfo = try? JSON(self.userInfo)
+        let newUserInfo = try? JSON(userInfo)
+        
+        guard self.colorScheme != colorScheme || self.urlParameters != urlParameters, currentUserInfo != newUserInfo else {
             return
         }
 

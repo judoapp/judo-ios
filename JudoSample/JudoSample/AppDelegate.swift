@@ -35,7 +35,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         })
         
         Judo.initialize(configuration: configuration)
-        Judo.sharedInstance.performSync(prefetchAssets: true)
+        Judo.sharedInstance.performSync()
         Judo.sharedInstance.registerAppRefreshTask(taskIdentifier: "app.judo.background.refresh")
         
         application.registerForRemoteNotifications()

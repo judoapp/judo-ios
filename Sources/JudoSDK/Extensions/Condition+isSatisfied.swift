@@ -17,7 +17,7 @@ import Foundation
 import JudoModel
 
 extension Condition {
-    func isSatisfied(data: Any?, urlParameters: [String: String], userInfo: [String: String]) -> Bool {
+    func isSatisfied(data: Any?, urlParameters: [String: String], userInfo: [String: Any]) -> Bool {
         let lhs = JSONSerialization.value(
             forKeyPath: keyPath,
             data: data,

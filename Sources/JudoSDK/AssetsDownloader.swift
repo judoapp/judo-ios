@@ -134,7 +134,7 @@ final class AssetsDownloader {
         }
 
         let taskIdentifier = UUID().uuidString
-        let request = URLRequest.judoApi(url: url)
+        let request = URLRequest.assetRequest(url: url)
         let session = priority == .high ? lowSession : highSession
         let urlTask = session.dataTask(with: request) { result in
             self.tasksLock.lock()

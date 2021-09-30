@@ -184,7 +184,7 @@ final class Analytics {
             let events = Array(self.eventQueue.prefix(self.maxBatchSize))
             let url = URL(string: "https://analytics.judo.app/batch")!
             
-            var request = URLRequest.judoApi(url: url)
+            var request = URLRequest.apiRequest(url: url)
             request.httpMethod = "POST"
             request.addValue("application/json", forHTTPHeaderField: "Content-Type")
             

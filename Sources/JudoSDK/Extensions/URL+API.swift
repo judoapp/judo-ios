@@ -18,20 +18,52 @@ import UIKit
 import JudoModel
 
 extension URLRequest {
-    static func judoApi(url: URL, accessToken: String = Judo.sharedInstance.configuration.accessToken, identifierForVendor: String = UIDevice().identifierForVendor?.uuidString ?? "") -> URLRequest {
+    static func assetRequest(url: URL) -> URLRequest {
         var request = URLRequest(url: url)
-        request.addValue("application/json", forHTTPHeaderField: "Accept")
-        request.addValue("gzip, deflate", forHTTPHeaderField: "Accept-Encoding")
-        request.addValue(accessToken, forHTTPHeaderField: "Judo-Access-Token")
-        request.addValue(identifierForVendor, forHTTPHeaderField: "Judo-Device-ID")
-        request.addValue(judoUserAgent, forHTTPHeaderField: "User-Agent")
+        request.addDefaultHeaders()
         return request
     }
     
-    static func experienceJudoApi(url: URL, accessToken: String = Judo.sharedInstance.configuration.accessToken, identifierForVendor: String = UIDevice().identifierForVendor?.uuidString ?? "") -> URLRequest {
-        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
-        components.queryItems = [URLQueryItem(name: "apiVersion", value: Meta.APIVersion.description)] + (components.queryItems ?? [])
-        return judoApi(url: components.url!, accessToken: accessToken, identifierForVendor: identifierForVendor)
+    static func apiRequest(url: URL) -> URLRequest {
+        var request = URLRequest(url: url)
+        request.addDefaultHeaders()
+        request.addAPIHeaders()
+        request.addAPIVersionParameter()
+        return request
+    }
+    
+    private mutating func addDefaultHeaders() {
+        let deviceID = UIDevice().identifierForVendor?.uuidString ?? ""
+        addValue(deviceID, forHTTPHeaderField: "Judo-Device-ID")
+        addValue("gzip, deflate", forHTTPHeaderField: "Accept-Encoding")
+        addValue(judoUserAgent, forHTTPHeaderField: "User-Agent")
+    }
+    
+    private mutating func addAPIHeaders() {
+        addValue("application/json", forHTTPHeaderField: "Accept")
+        addValue(Judo.sharedInstance.configuration.accessToken, forHTTPHeaderField: "Judo-Access-Token")
+    }
+    
+    private mutating func addAPIVersionParameter() {
+        guard let existingURL = url,
+              var components = URLComponents(url: existingURL, resolvingAgainstBaseURL: false) else {
+            assertionFailure("Invalid URL Request")
+            return
+        }
+        
+        let apiVersion = URLQueryItem(
+            name: "apiVersion",
+            value: Meta.APIVersion.description
+        )
+        
+        components.queryItems = [apiVersion] + (components.queryItems ?? [])
+        
+        guard let newURL = components.url else {
+            assertionFailure("Failed to append API version to URL request")
+            return
+        }
+        
+        url = newURL
     }
 }
 

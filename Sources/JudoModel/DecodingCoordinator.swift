@@ -121,13 +121,20 @@ fileprivate struct OneToManyRelationship<T, U>: PendingRelationship where U: Nod
     func resolve(nodes: [Node.ID : Node]) {
         object[keyPath: keyPath] = nodeIDs.compactMap { nodeID in
             guard let node = nodes[nodeID] as? U else {
-                assertionFailure("""
-                    Failed to resolve relationship. No node found with id \
-                    \(nodeID).
-                    """
-                )
-                judo_log(.error, "Failed to resolve one to many relationship. No node found with id %@", nodeID)
+                // There are valid instances where a relationship can be
+                // missing: AppBar and AppBarMenuItem nodes. In these cases we
+                // don't want to raise an assertion. The long-term solution to
+                // this problem is to customize the API response per-platform.
+                // In the meantime we've opted to disable the assertion rather
+                // than over-engineer a complex solution.
                 
+//                assertionFailure("""
+//                    Failed to resolve relationship. No node found with id \
+//                    \(nodeID).
+//                    """
+//                )
+//                judo_log(.error, "Failed to resolve one to many relationship. No node found with id %@", nodeID)
+//
                 return nil
             }
             

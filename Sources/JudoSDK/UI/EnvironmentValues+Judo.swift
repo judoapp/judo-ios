@@ -70,7 +70,7 @@ internal struct URLParametersKey: EnvironmentKey {
 
 @available(iOS 13.0, *)
 internal struct UserInfoKey: EnvironmentKey {
-    static let defaultValue: [String: String] = [:]
+    static let defaultValue: [String: Any] = [:]
 }
 
 @available(iOS 13.0, *)
@@ -175,7 +175,7 @@ internal extension EnvironmentValues {
         }
     }
     
-    var userInfo: [String: String] {
+    var userInfo: [String: Any] {
         get {
             return self[UserInfoKey.self]
         }

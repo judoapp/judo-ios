@@ -42,8 +42,44 @@ public struct Configuration {
     
     /// A closure which returns the root view controller of your app. Judo will use this view controller to
     /// present experiences.
-    public var rootViewController: () -> UIViewController? = {
-        UIApplication.shared.windows.first?.rootViewController
+    public var viewControllerForPresenting: () -> UIViewController? = {
+        guard let rootViewController = UIApplication.shared.keyWindow?.rootViewController else {
+            judo_log(.error, "Unable to obtain key window's root view controller")
+            return nil
+        }
+        var findVisibleViewController: ((UIViewController) -> UIViewController?)?
+               findVisibleViewController = { viewController in
+                   if let presentedViewController = viewController.presentedViewController {
+                       return findVisibleViewController?(presentedViewController)
+                   }
+                   
+                   if let navigationController = viewController as? UINavigationController {
+                       return navigationController.visibleViewController
+                   }
+                   
+                   if let tabBarController = viewController as? UITabBarController {
+                       return tabBarController.selectedViewController
+                   }
+                   
+                   return viewController
+               }
+               
+        guard let visibleViewController = findVisibleViewController?(rootViewController) else {
+            judo_log(.error, "Unable to obtain visible view controller")
+            return nil
+        }
+        return visibleViewController
+    }
+    
+    @available(*, deprecated, renamed: "presentingViewController")
+    public var rootViewController: () -> UIViewController? {
+        get {
+            viewControllerForPresenting
+        }
+        
+        set(value) {
+            viewControllerForPresenting = value
+        }
     }
     
     struct Authorizer {

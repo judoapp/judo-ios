@@ -18,7 +18,7 @@ import JudoModel
 
 @available(iOS 13.0, *)
 extension Collection {
-    func items(data: Any?, urlParameters: [String: String], userInfo: [String: String]) -> [Any] {
+    func items(data: Any?, urlParameters: [String: String], userInfo: [String: Any]) -> [Any] {
         guard var result = JSONSerialization.value(forKeyPath: keyPath, data: data, urlParameters: urlParameters, userInfo: userInfo) as? [Any] else {
             return []
         }

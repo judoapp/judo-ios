@@ -96,7 +96,7 @@ final class SyncService {
 
                 sync.filter(\.removed).forEach {
                     let cache = self.urlSession.configuration.urlCache!
-                    cache.removeCachedResponse(for: URLRequest.experienceJudoApi(url: $0.url))
+                    cache.removeCachedResponse(for: URLRequest.apiRequest(url: $0.url))
                 }
 
                 let dataToFetch = sync.filter({ $0.removed == false })
@@ -130,7 +130,7 @@ final class SyncService {
     /// Fetch experience asynchronously.
     /// - Parameter completion: Fetched experience data
     func fetchExperienceData(url: URL, cachePolicy: URLRequest.CachePolicy, completion: @escaping (Result<Data, Swift.Error>) -> Void) {
-        var urlRequest = URLRequest.judoApi(url: url)
+        var urlRequest = URLRequest.apiRequest(url: url)
         urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
         urlRequest.cachePolicy = cachePolicy
         urlSession.dataTask(with: urlRequest) { result in
@@ -149,7 +149,7 @@ final class SyncService {
         var accumulatedSyncData: [SyncResponse.Data] = []
 
         let url = syncToken ?? domainURL.appendingPathComponent("sync")
-        var urlRequest = URLRequest.experienceJudoApi(url: url)
+        var urlRequest = URLRequest.apiRequest(url: url)
         urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
         urlRequest.cachePolicy = .reloadRevalidatingCacheData
         fetchSyncDataPage(urlSession, request: urlRequest) { [weak self] result in
@@ -173,7 +173,7 @@ final class SyncService {
                     let data = try result.get()
                     let sync = try JSONDecoder().decode(SyncResponse.self, from: data)
                     if !sync.data.isEmpty {
-                        self.fetchSyncDataPage(session, request: URLRequest.experienceJudoApi(url: sync.nextLink), update: update)
+                        self.fetchSyncDataPage(session, request: URLRequest.apiRequest(url: sync.nextLink), update: update)
                         return (isLast: false, syncToken: sync.nextLink, data: sync.data)
                     }
 
