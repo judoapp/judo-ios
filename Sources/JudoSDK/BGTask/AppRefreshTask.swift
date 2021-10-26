@@ -24,8 +24,8 @@ enum AppRefreshTask {
         guard let permittedIdentifiers = Bundle.main.object(forInfoDictionaryKey: "BGTaskSchedulerPermittedIdentifiers") as? [String],
               permittedIdentifiers.contains(taskIdentifier)
         else {
-            judo_log(.error, "Background task identifier %@ is not permited. Verify Info.plist \"BGTaskSchedulerPermittedIdentifiers\" key values.", taskIdentifier)
-            preconditionFailure("Background task identifier \(taskIdentifier) is not permited. Verify Info.plist \"BGTaskSchedulerPermittedIdentifiers\" key values.")
+            judo_log(.error, "Background task identifier %@ is not permitted. Verify Info.plist \"BGTaskSchedulerPermittedIdentifiers\" key values.", taskIdentifier)
+            preconditionFailure("Background task identifier \(taskIdentifier) is not permitted. Verify Info.plist \"BGTaskSchedulerPermittedIdentifiers\" key values.")
         }
 
         BGTaskScheduler.shared.register(forTaskWithIdentifier: taskIdentifier, using: nil) { task in

@@ -14,6 +14,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import Foundation
+import os.log
 
 extension JSONSerialization {
     /// A utility function for accessing a value in a given data context by a stringly-typed key path. The data
@@ -37,51 +38,88 @@ extension JSONSerialization {
         if let data = data {
             object["data"] = data
         }
-        
-        var result: Any? = object
-        
-        // The following code traverses through the `result` object by applying
-        // the `keyPath` which is a string comprised of object keys separated by
-        // the dot character. The `keyPath` is first split into tokens, however
-        // a token is not necessarily equal to a key because we can not
-        // guarantee that a key does not contain the dot character itself.
-        //
-        // E.g. consider the following JSON object:
-        //
-        // ```
-        // {
-        //   "foo": {
-        //     "bar.baz": true
-        //   }
-        // }
-        // ```
-        //
-        // To access the boolean value, this method would be called with the
-        // `keyPath` value of "foo.bar.baz" which results in three tokens but
-        // must be processed as two keys: "foo" and "bar.baz".
-        //
-        // To achieve this we attempt to construct a key by popping values from
-        // the list of tokens until we find a valid key. If no valid key can be
-        // constructed before we run out of tokens, nil is returned.
-        
-        var tokens = keyPath.split(separator: ".").map { String($0) }
-        
-        if tokens.isEmpty {
-            return nil
-        }
-        
-        outer: while !tokens.isEmpty, let object = result as? [String: Any] {
-            var paths = [String]()
-            while !tokens.isEmpty {
-                paths.append(tokens.removeFirst())
-                let key = paths.joined(separator: ".")
-                if let nextResult = object[key] {
-                    result = nextResult
-                    continue outer
-                }
-            }
-        }
-        
-        return result
+       
+        return fetchValueByKeyPath(dict: object, keyPath: keyPath)
     }
+}
+
+/// Implements support for object/dictionary traversal using traversal operators in the form of `.` (periods).
+///
+/// Also handles keys that have periods in them by greedily matching without traversal beforehand.
+///
+/// E.g. consider the following JSON object:
+///
+/// ```
+/// {
+///   "foo": {
+///     "bar.baz": true
+///   }
+/// }
+/// ```
+///
+/// To access the boolean value, this method would be called with the
+/// `keyPath` value of "foo.bar.baz" which results in three tokens but
+/// must be processed as two keys: "foo" and "bar.baz".
+private func fetchValueByKeyPath(dict: [String: Any], keyPath: String) -> Any? {
+    // build out a list of all the possible splits: ie each possible split if the keypath, done at a single possible period separator.  However start the range at one, since one key at least must always be present.
+    guard let firstIndex = keyPath.indices.first, let lastIndex = keyPath.indices.last else {
+        // if keyPath empty string, try that directly on the dict.
+        return dict[keyPath]
+    }
+    
+    let periodIndices = keyPath.indices.filter { index in
+        keyPath[index] == "."
+    }
+    
+    struct Match {
+        var key: String
+        var remainder: String
+    }
+    
+    let periodPossibilities: [Match] = periodIndices.flatMap { periodIndex -> [Match] in
+        // there are three cases. either the key greedily takes the period, the remainder does, or neither do.
+        
+        // greedy key:
+        let greedyKey = Match(
+            key: String(keyPath[firstIndex...periodIndex]),
+            remainder: String(keyPath[periodIndex...lastIndex].dropFirst())
+        )
+
+        // greedy remainder:
+        let greedyRemainder = Match(
+            key: String(keyPath[firstIndex..<periodIndex]),
+            remainder: String(keyPath[periodIndex...lastIndex])
+        )
+
+        // greedy neither:
+        let neitherGreedy = Match(
+            key: String(keyPath[firstIndex..<periodIndex]),
+            remainder: String(keyPath[periodIndex...lastIndex].dropFirst())
+        )
+        
+        return [greedyKey, greedyRemainder, neitherGreedy]
+    }
+    
+    let possibilities = periodPossibilities + [Match(key: keyPath, remainder: "")]
+    
+    // start from the longest possible key, to ensure greedy matching of a key containing multiple periods.
+    let match = possibilities.last { derp in
+        dict.keys.contains(derp.key)
+    }
+    
+    guard let match = match else {
+        // key, in any of the possible permutations, not present at all.
+        return nil
+    }
+    
+    if match.remainder.isEmpty {
+        return dict[match.key]
+    }
+    
+    // there is a remaining path. This means the nested value must be a dictionary.
+    guard let nestedDictionary = dict[match.key] as? [String: Any] else {
+        judo_log(.error, "Invalid nested keypath into a non-dictionary value: %s", match.remainder)
+        return nil
+    }
+    return fetchValueByKeyPath(dict: nestedDictionary, keyPath: match.remainder)
 }
