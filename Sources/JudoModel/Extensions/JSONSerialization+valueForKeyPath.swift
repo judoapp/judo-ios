@@ -103,11 +103,11 @@ private func fetchValueByKeyPath(dict: [String: Any], keyPath: String) -> Any? {
     let possibilities = periodPossibilities + [Match(key: keyPath, remainder: "")]
     
     // start from the longest possible key, to ensure greedy matching of a key containing multiple periods.
-    let match = possibilities.last { derp in
-        dict.keys.contains(derp.key)
+    let possibleMatch = possibilities.last { entry in
+        dict.keys.contains(entry.key)
     }
     
-    guard let match = match else {
+    guard let match = possibleMatch else {
         // key, in any of the possible permutations, not present at all.
         return nil
     }
