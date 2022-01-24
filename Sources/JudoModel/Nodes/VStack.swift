@@ -36,7 +36,7 @@ public final class VStack: Layer {
     
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        alignment = try container.decode(HorizontalAlignment.self, forKey: .alignment)
+        alignment = try container.decode(HorizontalAlignmentValue.self, forKey: .alignment).horizontalAlignment
         spacing = try container.decode(CGFloat.self, forKey: .spacing)        
         try super.init(from: decoder)
     }

@@ -17,6 +17,23 @@ import JudoModel
 import SwiftUI
 import os.log
 
+internal struct ExperienceViewControllerHolder {
+    weak var experienceViewController: ExperienceViewController?
+    
+    init(_ experience: ExperienceViewController?) {
+        self.experienceViewController = experience
+    }
+}
+
+@available(iOS 13.0, *)
+internal struct ScreenViewControllerHolder {
+    weak var screenViewController: ScreenViewController?
+    
+    init(_ experience: ScreenViewController?) {
+        self.screenViewController = experience
+    }
+}
+
 @available(iOS 13.0, *)
 internal struct ExperienceKey: EnvironmentKey {
     static let defaultValue: Experience? = nil
@@ -50,12 +67,12 @@ internal struct ShowActionKey: EnvironmentKey {
 
 @available(iOS 13.0, *)
 internal struct ScreenViewControllerKey: EnvironmentKey {
-    static let defaultValue: ScreenViewController? = nil
+    static let defaultValue: ScreenViewControllerHolder? = nil
 }
 
 @available(iOS 13.0, *)
 internal struct ExperienceViewControllerKey: EnvironmentKey {
-    static let defaultValue: ExperienceViewController? = nil
+    static let defaultValue: ExperienceViewControllerHolder? = nil
 }
 
 @available(iOS 13.0, *)
@@ -135,7 +152,7 @@ internal extension EnvironmentValues {
         }
     }
 
-    var screenViewController: ScreenViewController? {
+    var screenViewController: ScreenViewControllerHolder? {
         get {
             self[ScreenViewControllerKey.self]
         }
@@ -145,7 +162,7 @@ internal extension EnvironmentValues {
         }
     }
  
-    var experienceViewController: ExperienceViewController? {
+    var experienceViewController: ExperienceViewControllerHolder? {
         get {
             self[ExperienceViewControllerKey.self]
         }

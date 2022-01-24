@@ -68,12 +68,12 @@ public enum Font: Decodable, Hashable {
         let typeName = try container.decode(String.self, forKey: .typeName)
         switch typeName {
         case "DynamicFont":
-            let textStyle = try container.decode(SwiftUI.Font.TextStyle.self, forKey: .textStyle)
+            let textStyle = try container.decode(TextStyleValue.self, forKey: .textStyle).textStyle
             let emphases = try container.decode(Set<Font.Emphasis>.self, forKey: .emphases)
             self = .dynamic(textStyle: textStyle, emphases: emphases)
         case "FixedFont":
             let size = try container.decode(CGFloat.self, forKey: .size)
-            let weight = try container.decode(SwiftUI.Font.Weight.self, forKey: .weight)
+            let weight = try container.decode(WeightValue.self, forKey: .weight).weight
             self = .fixed(size: size, weight: weight)
         case "CustomFont":
             let fontName = try container.decode(FontName.self, forKey: .fontName)

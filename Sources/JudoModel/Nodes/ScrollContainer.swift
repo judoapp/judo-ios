@@ -37,7 +37,7 @@ public final class ScrollContainer: Layer {
     
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        axis = try container.decode(Axis.self, forKey: .axis)
+        axis = try container.decode(AxisValue.self, forKey: .axis).axis
         disableScrollBar = try container.decode(Bool.self, forKey: .disableScrollBar)
         try super.init(from: decoder)
     }

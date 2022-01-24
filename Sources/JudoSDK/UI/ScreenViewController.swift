@@ -89,7 +89,7 @@ open class ScreenViewController: UIViewController, UIScrollViewDelegate {
         showOrHideNavBarIfNeeded()
 
         self.configureNavBar()
-        let cancellable = NotificationCenter.default.publisher(for: Judo.didRegisterCustomFontNotification).sink { _ in
+        let cancellable = NotificationCenter.default.publisher(for: Judo.didRegisterCustomFontNotification).sink { [unowned self] _ in
             self.configureNavBar()
         }
         cancellables.insert(cancellable)
@@ -133,7 +133,7 @@ open class ScreenViewController: UIViewController, UIScrollViewDelegate {
                 urlParameters: urlParameters,
                 userInfo: userInfo,
                 traits: traitCollection,
-                buttonHandler: navBarButtonTapped
+                buttonHandler: { [weak self] navBarButton in self?.navBarButtonTapped(navBarButton) }
             )
         }
     }
@@ -154,6 +154,14 @@ open class ScreenViewController: UIViewController, UIScrollViewDelegate {
             return nil
         }
         return experienceViewController
+    }
+    
+    private var experienceViewControllerHolder: ExperienceViewControllerHolder {
+        get { return ExperienceViewControllerHolder(experienceViewController) }
+    }
+    
+    private var screenViewControllerHolder: ScreenViewControllerHolder {
+        get { return ScreenViewControllerHolder(self) }
     }
     
     // MARK: - Nav Bar
@@ -210,7 +218,7 @@ open class ScreenViewController: UIViewController, UIScrollViewDelegate {
     // MARK: - Children
     
     private func addChildren() {
-        screen.children.compactMap { $0 as? Layer }.reversed().forEach { layer in
+        screen.children.compactMap { $0 as? Layer }.reversed().forEach { [unowned self] layer in
             addLayer(layer)
         }
     }
@@ -264,7 +272,7 @@ open class ScreenViewController: UIViewController, UIScrollViewDelegate {
     private func viewForLayer(_ layer: Layer) -> some View {
         if isRootScrollContainer(layer) {
             _viewForLayer(layer)
-                .introspectScrollView { scrollView in
+                .introspectScrollView { [weak self] scrollView in
                     scrollView.delegate = self
                 }
         } else {
@@ -279,11 +287,11 @@ open class ScreenViewController: UIViewController, UIScrollViewDelegate {
                 .environment(\.presentAction, { [weak self] viewController in
                     self?.present(viewController, animated: true)
                 })
-                .environment(\.showAction, { [ weak self] viewController in
+                .environment(\.showAction, { [weak self] viewController in
                     self?.show(viewController, sender: self)
                 })
-                .environment(\.screenViewController, self)
-                .environment(\.experienceViewController, experienceViewController)
+                .environment(\.screenViewController, screenViewControllerHolder)
+                .environment(\.experienceViewController, experienceViewControllerHolder)
                 .environment(\.experience, experience)
                 .environment(\.screen, screen)
                 .environment(\.stringTable, experience.localization)

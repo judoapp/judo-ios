@@ -57,7 +57,7 @@ public final class Text: Layer {
         text = try container.decode(String.self, forKey: .text)
         font = try container.decode(Font.self, forKey: .font)
         textColor = try container.decode(ColorVariants.self, forKey: .textColor)
-        textAlignment = try container.decode(TextAlignment.self, forKey: .textAlignment)
+        textAlignment = try container.decode(TextAlignmentValue.self, forKey: .textAlignment).textAlignment
         lineLimit = try container.decodeIfPresent(Int.self, forKey: .lineLimit)
         transform = try container.decodeIfPresent(Transform.self, forKey: .transform)
         try super.init(from: decoder)

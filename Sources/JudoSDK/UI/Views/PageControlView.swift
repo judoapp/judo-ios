@@ -56,23 +56,16 @@ struct PageControlView: View {
         }
     }
     
-    private var numberOfPages: Int {
+    private var numberOfPages: Binding<Int> {
         guard let carousel = pageControl.carousel else {
-            return 0
+            return .constant(0)
         }
         
-        return carousel.children.reduce(into: 0) { result, node in
-            if let collection = node as? Collection {
-                let items = collection.items(
-                    data: data,
-                    urlParameters: urlParameters,
-                    userInfo: userInfo
-                )
-                
-                result += items.count * collection.children.count
-            } else {
-                result += 1
-            }
+        let viewID = ViewID(nodeID: carousel.id, collectionIndex: collectionIndex)
+        return Binding {
+            carouselState.currentNumberOfPagesForCarousel[viewID] ?? 0
+        } set: { newValue in
+            carouselState.currentNumberOfPagesForCarousel[viewID] = newValue
         }
     }
 
@@ -181,7 +174,7 @@ private struct PageControlViewBody: UIViewRepresentable {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.urlParameters) private var urlParameters
     @Environment(\.userInfo) private var userInfo
-    private var numberOfPages: Int
+    @Binding private var numberOfPages: Int
     @Binding private var currentPage: Int
     private var hidesForSinglePage: Bool
 
@@ -190,8 +183,8 @@ private struct PageControlViewBody: UIViewRepresentable {
 
     @ObservedObject var images: Images
 
-    init(numberOfPages: Int, currentPage: Binding<Int>, hidesForSinglePage: Bool, normalColor: UIColor, currentColor: UIColor, normalImage: JudoModel.Image?, currentImage: JudoModel.Image?) {
-        self.numberOfPages = numberOfPages
+    init(numberOfPages: Binding<Int>, currentPage: Binding<Int>, hidesForSinglePage: Bool, normalColor: UIColor, currentColor: UIColor, normalImage: JudoModel.Image?, currentImage: JudoModel.Image?) {
+        self._numberOfPages = numberOfPages
         self._currentPage = currentPage
         self.hidesForSinglePage = hidesForSinglePage
         self.normalColor = normalColor
@@ -219,7 +212,10 @@ private struct PageControlViewBody: UIViewRepresentable {
 
     func updateUIView(_ pageControl: UIPageControl, context: Context) {
         images.fetchImages(data: data, colorScheme: colorScheme, urlParameters: urlParameters, userInfo: userInfo)
-
+        
+        //Update page count, before iterating on the number of pages.
+        pageControl.numberOfPages = numberOfPages
+        
         // Store current value. currentPage is a binding and it's value may change.
         let currentPageValue = currentPage
 

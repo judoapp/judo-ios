@@ -23,6 +23,6 @@ public struct Background: Decodable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         node = try container.decodeNode(forKey: .node)
-        alignment = try container.decode(Alignment.self, forKey: .alignment)
+        alignment = try container.decode(AlignmentValue.self, forKey: .alignment).alignment
     }
 }

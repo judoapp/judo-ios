@@ -32,7 +32,7 @@ public final class ZStack: Layer {
     
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        alignment = try container.decode(Alignment.self, forKey: .alignment)
+        alignment = try container.decode(AlignmentValue.self, forKey: .alignment).alignment
         try super.init(from: decoder)
     }
 }

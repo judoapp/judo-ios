@@ -138,6 +138,10 @@ extension UINavigationItem {
 
         compactAppearance = appearance
         standardAppearance = appearance
+        
+        if #available(iOS 15, *) {
+            scrollEdgeAppearance = appearance
+        }
     }
 
     func configureLargeAppearance(navBar: NavBar, traits: UITraitCollection) {

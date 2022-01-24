@@ -18,4 +18,5 @@ import Combine
 @available(iOS 13.0, *)
 final class CarouselState: ObservableObject {
     @Published var currentPageForCarousel: [ViewID: Int] = [:]
+    @Published var currentNumberOfPagesForCarousel: [ViewID: Int] = [:]
 }

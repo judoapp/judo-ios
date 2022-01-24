@@ -77,6 +77,6 @@ public struct Frame: Decodable, Equatable {
             maxHeight = try container.decodeIfPresent(CGFloat.self, forKey: .maxHeight)
         }
 
-        alignment = try container.decode(Alignment.self, forKey: .alignment)
+        alignment = try container.decode(AlignmentValue.self, forKey: .alignment).alignment
     }
 }

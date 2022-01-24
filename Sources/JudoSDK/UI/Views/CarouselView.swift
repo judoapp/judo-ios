@@ -31,16 +31,28 @@ struct CarouselView: View {
         PageViewController(
             pages: pages,
             loop: carousel.isLoopEnabled,
-            currentPage: currentPage
+            currentPage: currentPage,
+            numberOfPages: numberOfPages
         )
     }
     
     private var currentPage: Binding<Int> {
         let viewID = ViewID(nodeID: carousel.id, collectionIndex: collectionIndex)
+        
         return Binding {
             carouselState.currentPageForCarousel[viewID] ?? 0
         } set: { newValue in
             carouselState.currentPageForCarousel[viewID] = newValue
+        }
+    }
+    
+    private var numberOfPages: Binding<Int> {
+        let viewID = ViewID(nodeID: carousel.id, collectionIndex: collectionIndex)
+        
+        return Binding {
+            carouselState.currentNumberOfPagesForCarousel[viewID] ?? 0
+        } set: { newValue in
+            carouselState.currentNumberOfPagesForCarousel[viewID] = newValue
         }
     }
     
@@ -93,11 +105,13 @@ private struct PageViewController: UIViewControllerRepresentable {
     private let pages: [Page]
     private let loop: Bool
     @Binding private var currentPage: Int
+    @Binding private var numberOfPages: Int
 
-    init(pages: [Page], loop: Bool, currentPage: Binding<Int>) {
+    init(pages: [Page], loop: Bool, currentPage: Binding<Int>, numberOfPages: Binding<Int>) {
         self.pages = pages
         self.loop = loop
         self._currentPage = currentPage
+        self._numberOfPages = numberOfPages
     }
 
     func makeCoordinator() -> Coordinator {
@@ -110,6 +124,8 @@ private struct PageViewController: UIViewControllerRepresentable {
             navigationOrientation: .horizontal)
         pageViewController.dataSource = context.coordinator
         pageViewController.delegate = context.coordinator
+        
+        self.numberOfPages = self.pages.count
 
         return pageViewController
     }

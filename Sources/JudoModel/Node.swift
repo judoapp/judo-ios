@@ -112,7 +112,12 @@ public class Node: Decodable, Identifiable {
         let coordinator = decoder.userInfo[.decodingCoordinator] as! DecodingCoordinator
         
         // Layout
-        ignoresSafeArea = try container.decodeIfPresent(Set<Edge>.self, forKey: .ignoresSafeArea)
+        if let edgeValueSet = try container.decodeIfPresent(Set<EdgeValue>.self, forKey: .ignoresSafeArea) {
+            ignoresSafeArea = Set(edgeValueSet.compactMap{ $0.edge })
+        } else {
+            ignoresSafeArea = nil
+        }
+        
         aspectRatio = try container.decodeIfPresent(CGFloat.self, forKey: .aspectRatio)
         padding = try container.decodeIfPresent(Padding.self, forKey: .padding)
         frame = try container.decodeIfPresent(Frame.self, forKey: .frame)

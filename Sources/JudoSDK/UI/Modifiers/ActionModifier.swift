@@ -24,8 +24,8 @@ struct ActionModifier: ViewModifier {
     @Environment(\.screen) private var screen
     @Environment(\.presentAction) private var presentAction
     @Environment(\.showAction) private var showAction
-    @Environment(\.experienceViewController) private var experienceViewController
-    @Environment(\.screenViewController) private var screenViewController
+    @Environment(\.experienceViewController) private var experienceViewControllerHolder
+    @Environment(\.screenViewController) private var screenViewControllerHolder
     @Environment(\.data) private var data
     @Environment(\.urlParameters) private var urlParameters
     @Environment(\.userInfo) private var userInfo
@@ -33,7 +33,7 @@ struct ActionModifier: ViewModifier {
     
     @ViewBuilder
     func body(content: Content) -> some View {
-        if let action = layer.action, let experience = experience, let screen = screen, let experienceViewController = experienceViewController, let screenViewController = screenViewController {
+        if let action = layer.action, let experience = experience, let screen = screen, let experienceViewController = experienceViewControllerHolder?.experienceViewController, let screenViewController = screenViewControllerHolder?.screenViewController {
             Button {
                 action.handle(experience: experience, node: layer, screen: screen, data: data, urlParameters: urlParameters, userInfo: userInfo, authorize: authorize, experienceViewController: experienceViewController, screenViewController: screenViewController)
             } label: {

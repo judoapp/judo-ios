@@ -61,6 +61,12 @@ public final class Judo {
         }
     }
     
+    /// Access JudoSDK version string
+    public let sdkVersion: String = Meta.SDKVersion
+    
+    /// Access JudoSDK version string
+    public static let sdkVersion: String = Meta.SDKVersion
+    
     private var screenViewedObserver: NSObjectProtocol?
     
     @available(iOS 13.0, *)
@@ -121,10 +127,10 @@ public final class Judo {
     // MARK: Configurable
     
     /// To customize Judo's caching behavior (such as the change the default limits on cache storage), replace this URLCache with a custom configured instance.
-    public lazy var urlCache: URLCache = .judoDefaultCache()
+    public lazy var urlCache: URLCache = .makeJudoDefaultCache()
 
     /// Downloaded assets cache.
-    public lazy var assetsURLCache: URLCache = .judoAssetsDefaultCache()
+    public lazy var assetsURLCache: URLCache = .makeJudoAssetsDefaultCache()
 
     /// This NSCache is used to retain references to images loaded for display in Experiences.  The images are not given calculated costs, so `totalCostLimit` should be in terms of total images, not bytes of memory.
     public lazy var imageCache: NSCache<NSURL, UIImage> = .judoDefaultImageCache()
@@ -481,8 +487,8 @@ public final class Judo {
     }
 }
 
-private extension URLCache {
-    static func judoDefaultCache() -> URLCache {
+public extension URLCache {
+    static func makeJudoDefaultCache() -> URLCache {
         let cacheURL = try? FileManager.default
             .url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
             .appendingPathComponent("JudoCache", isDirectory: true)
@@ -495,7 +501,7 @@ private extension URLCache {
         }
     }
 
-    static func judoAssetsDefaultCache() -> URLCache {
+    static func makeJudoAssetsDefaultCache() -> URLCache {
         let cacheURL = try? FileManager.default
             .url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
             .appendingPathComponent("JudoAssetsCache", isDirectory: true)

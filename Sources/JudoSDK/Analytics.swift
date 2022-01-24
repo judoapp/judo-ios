@@ -165,7 +165,13 @@ final class Analytics {
     }
     
     private func flushEvents(minBatchSize: Int = 1) {
-        serialQueue.addOperation {
+        let flushEventsOperation = BlockOperation()
+        
+        flushEventsOperation.addExecutionBlock { [unowned flushEventsOperation] in
+            guard !flushEventsOperation.isCancelled else {
+                return
+            }
+            
             if self.uploadTask != nil {
                 judo_log(.debug, "Skipping flush – already in progress")
                 return
@@ -188,6 +194,10 @@ final class Analytics {
             request.httpMethod = "POST"
             request.addValue("application/json", forHTTPHeaderField: "Content-Type")
             
+            guard !flushEventsOperation.isCancelled else {
+                return
+            }
+            
             do {
                 let batch = Batch(events: events)
                 let encoder = JSONEncoder()
@@ -196,6 +206,10 @@ final class Analytics {
             } catch {
                 judo_log(.error, "Unable to encode events for tracking to web API. (Reason: %s", error.debugDescription)
                 self.removeEvents(events)
+                return
+            }
+            
+            guard !flushEventsOperation.isCancelled else {
                 return
             }
             
@@ -231,9 +245,15 @@ final class Analytics {
                 self.endBackgroundTask()
             }
             
+            guard !flushEventsOperation.isCancelled else {
+                return
+            }
+            
             uploadTask.resume()
             self.uploadTask = uploadTask
         }
+        
+        serialQueue.addOperation(flushEventsOperation)
     }
     
     private func removeEvents(_ eventsToRemove: [EventPayload]) {
@@ -278,7 +298,9 @@ extension Analytics {
 
 extension Analytics {
     private func beginBackgroundTask() {
-        endBackgroundTask()
+        serialQueue.addOperation {
+            self.endBackgroundTask()
+        }
         
         serialQueue.addOperation {
             self.backgroundTask = UIApplication.shared.beginBackgroundTask {
@@ -289,12 +311,10 @@ extension Analytics {
     }
     
     private func endBackgroundTask() {
-        serialQueue.addOperation {
-            if self.backgroundTask != UIBackgroundTaskIdentifier.invalid {
-                let taskIdentifier = UIBackgroundTaskIdentifier(rawValue: self.backgroundTask.rawValue)
-                UIApplication.shared.endBackgroundTask(taskIdentifier)
-                self.backgroundTask = UIBackgroundTaskIdentifier.invalid
-            }
+        if self.backgroundTask != UIBackgroundTaskIdentifier.invalid {
+            let taskIdentifier = UIBackgroundTaskIdentifier(rawValue: self.backgroundTask.rawValue)
+            UIApplication.shared.endBackgroundTask(taskIdentifier)
+            self.backgroundTask = UIBackgroundTaskIdentifier.invalid
         }
     }
 }
