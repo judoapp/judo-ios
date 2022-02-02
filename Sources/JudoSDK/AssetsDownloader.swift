@@ -135,7 +135,7 @@ final class AssetsDownloader {
 
         let taskIdentifier = UUID().uuidString
         let request = URLRequest.assetRequest(url: url)
-        let session = priority == .high ? lowSession : highSession
+        let session = priority == .high ? highSession : lowSession
         let urlTask = session.dataTask(with: request) { result in
             self.tasksLock.lock()
             self.tasks.filter({ $0.id == taskIdentifier }).forEach {
