@@ -74,10 +74,28 @@ extension Action {
         case .close:
             screenViewController.dismiss(animated: true)
         case .custom:
+            func behaviour() {
+                Judo.sharedInstance.registeredCustomActionCallbacks.forEach { callback in
+                    callback(
+                        Judo.CustomActionActivationEvent(
+                            node: node,
+                            screen: screen,
+                            experience: experience,
+                            metadata: node.metadata,
+                            data: data,
+                            urlParameters: urlParameters,
+                            userInfo: userInfo,
+                            viewController: screenViewController
+                        )
+                    )
+                }
+            }
             if self.dismissExperience ?? false {
                 performDismissExperience(experienceViewController: experienceViewController) {
-                    // no-op
+                    behaviour()
                 }
+            } else {
+                behaviour()
             }
         }
     }

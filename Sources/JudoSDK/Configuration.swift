@@ -15,6 +15,7 @@
 
 import UIKit
 
+/// A set of configuration parameters to initialize the Judo SDK with.
 public struct Configuration {
     public enum AnalyticsMode {
         /// All events are tracked along with any user data passed to the
@@ -35,6 +36,8 @@ public struct Configuration {
     }
     
     public var accessToken: String
+    
+    
     public var domain: String
     
     /// Configures which events are tracked by Judo and what data is captured.

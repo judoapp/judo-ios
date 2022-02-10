@@ -38,6 +38,26 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         Judo.sharedInstance.performSync()
         Judo.sharedInstance.registerAppRefreshTask(taskIdentifier: "app.judo.background.refresh")
         
+        if #available(iOS 13.0, *) {
+            // you can register a callback to be fired whenever a user taps/activates an Action
+            // with the Custom type set on a layer.
+            Judo.sharedInstance.registerCustomActionCallback { actionEvent in
+                // you can use the metadata associated with the layer that has the action to select
+                // which behaviour you'd like. In this example we delegate to two different behaviours:
+                switch actionEvent.metadata?.properties["behavior"] {
+                case "openWebsite":
+                    // open a website:
+                    UIApplication.shared.open(URL(string: "https://www.judo.app/")!)
+                default:
+                    // display a dialog box!
+                    let alertController = UIAlertController(title: "Hello from Judo!", message: "Custom Action fired! Thanks, \(actionEvent.userInfo["name"] as? String ?? "buddy")!", preferredStyle: .alert)
+                    let alertAction = UIAlertAction(title: "Got it", style: .default, handler: nil)
+                    alertController.addAction(alertAction)
+                    actionEvent.viewController.present(alertController, animated: true, completion: nil)
+                }
+            }
+        }
+        
         application.registerForRemoteNotifications()
         
         trackScreenViews()

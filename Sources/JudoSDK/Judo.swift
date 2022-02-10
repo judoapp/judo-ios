@@ -20,10 +20,15 @@ import JudoModel
 import os.log
 import UIKit
 
+/// This object is the main singleton entry point for most of the Judo SDK's functionality.
+///
+/// Use ``sharedInstance`` after you initialize the SDK to get access to it.
 public final class Judo {
     public let configuration: Configuration
     
-    /// Obtain the Judo SDK instance (after calling [initialize(accessToken:domain:)](x-source-tag://initialize)).
+    /// Obtain the Judo SDK instance.
+    ///
+    /// Usable after calling ``initialize(accessToken:domain:)`` or ``initialize(configuration:)``.
     public static var sharedInstance: Judo {
         get {
             guard let instance = _instance else {
@@ -35,7 +40,9 @@ public final class Judo {
     
     private static var _instance: Judo?
 
-    /// Initialize the JudoSDK given the accessToken and domain name.
+    /// Initialize the Judo SDK given the accessToken and domain name.
+    ///
+    /// For additional configuration parameters, switch to ``initialize(configuration:)``.
     public static func initialize(accessToken: String, domain: String) {
         precondition(!accessToken.isEmpty, "Missing Judo access token.")
         precondition(!domain.isEmpty, "Judo domain must not be empty string.")
@@ -47,6 +54,7 @@ public final class Judo {
         initialize(configuration: configuration)
     }
     
+    /// Initialize the Judo SDK with the given ``Configuration``.
     public static func initialize(configuration: Configuration) {
         _instance = Judo(configuration: configuration)
     }
@@ -61,10 +69,10 @@ public final class Judo {
         }
     }
     
-    /// Access JudoSDK version string
+    /// Get the version number of the Judo SDK.
     public let sdkVersion: String = Meta.SDKVersion
     
-    /// Access JudoSDK version string
+    /// Get the version number of the Judo SDK.
     public static let sdkVersion: String = Meta.SDKVersion
     
     private var screenViewedObserver: NSObjectProtocol?
@@ -406,6 +414,62 @@ public final class Judo {
         }
         
         analytics.addEvent(payload)
+    }
+    
+    // MARK: User Behaviour
+    
+    private var _registeredCustomActionCallbacks: Any?
+    
+    @available(iOS 13.0, *)
+    internal var registeredCustomActionCallbacks: [(CustomActionActivationEvent) -> Void] {
+        get {
+            (_registeredCustomActionCallbacks as? RegisteredCustomCallbacksHolder)?.callbacks ?? []
+        }
+        set {
+            _registeredCustomActionCallbacks = RegisteredCustomCallbacksHolder(newValue)
+        }
+    }
+    
+    /// This is needed to work around issues with stored properties and @available in Swift.
+    @available(iOS 13.0, *)
+    internal class RegisteredCustomCallbacksHolder {
+        init(_ callbacks: [(Judo.CustomActionActivationEvent) -> Void] = []) {
+            self.callbacks = callbacks
+        }
+        
+        var callbacks: [(CustomActionActivationEvent) -> Void] = []
+    }
+    
+    /// Describes a user's activation (ie., a tap) of a custom action on a layer in a Judo experience. A value of this type is given to any registered custom action callbacks registered with ``registerCustomActionCallback(_:)``. Use this to implement the behavior for custom buttons and the like.
+    ///
+    /// This type provides the context for the user activation custom action, giving the node (layer), screen, and experience data model objects in addition to the data context (URL parameters, user info, and data from a Web API data source).
+    ///
+    /// It also provides a reference to the UIViewController that is presenting the experience, allowing you to do implement your own effects, including dismissing the experience or presenting your own view controllers.
+    @available(iOS 13.0, *)
+    public struct CustomActionActivationEvent {
+        public var node: Node
+        public var screen: Screen
+        public var experience: Experience
+        
+        public var metadata: Metadata?
+
+        /// This value can be any of the types one might typically find in decoded JSON, ie., String, Int, dictionaries, arrays, and so on.
+        public var data: Any?
+        public var urlParameters: [String: String]
+        public var userInfo: [String: Any]
+        
+        /// The Judo-provided UIViewController that hosts the Experience that the user activated (ie., tapped) a layer with a custom action in.
+        ///
+        /// You can use this reference to present another view controller on top of this one, and/or dismiss the view controller.
+        public var viewController: UIViewController
+    }
+    
+    /// Register a callback that the Judo SDK will call when the user taps on a layer with an action type of "custom". Use this to implement the behavior for custom buttons and the like.
+    ///
+    /// The callback is given a ``CustomActionActivationEvent`` value.
+    @available(iOS 13.0, *)
+    public func registerCustomActionCallback(_ callback: @escaping (CustomActionActivationEvent) -> Void) {
+        registeredCustomActionCallbacks.append(callback)
     }
     
     // MARK: Presentation
