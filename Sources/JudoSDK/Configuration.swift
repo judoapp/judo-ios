@@ -35,10 +35,11 @@ public struct Configuration {
         case disabled
     }
     
-    public var accessToken: String
+    /// Access token, optional for bundled experiences
+    public var accessToken: String?
     
-    
-    public var domain: String
+    /// Domain, optional for bundled experiences
+    public var domain: String?
     
     /// Configures which events are tracked by Judo and what data is captured.
     public var analyticsMode = AnalyticsMode.default
@@ -103,14 +104,18 @@ public struct Configuration {
         )
     }
     
-    public init(accessToken: String, domain: String) {
+    public init(accessToken: String?, domain: String?) {
         self.accessToken = accessToken
         self.domain = domain
         
-        authorizers = [
-            Authorizer(pattern: "data.judo.app") { request in
-                request.setValue(accessToken, forHTTPHeaderField: "Judo-Access-Token")
-            }
-        ]
+        if let accessToken = accessToken, domain != nil {
+            authorizers = [
+                Authorizer(pattern: "data.judo.app") { request in
+                    request.setValue(accessToken, forHTTPHeaderField: "Judo-Access-Token")
+                }
+            ]
+        } else {
+            authorizers = []
+        }
     }
 }

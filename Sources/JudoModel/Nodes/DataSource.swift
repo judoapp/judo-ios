@@ -38,13 +38,14 @@ public class DataSource: Layer, ObservableObject {
     public let httpMethod: HTTPMethod
     public let httpBody: String?
     public let headers: [Header]
+    public let pollInterval: Int?
 
-
-    public init(id: String = UUID().uuidString, name: String?, parent: Node? = nil, children: [Node] = [], ignoresSafeArea: Set<Edge>? = nil, aspectRatio: CGFloat? = nil, padding: Padding? = nil, frame: Frame? = nil, layoutPriority: CGFloat? = nil, offset: CGPoint? = nil, shadow: Shadow? = nil, opacity: CGFloat? = nil, background: Background? = nil, overlay: Overlay? = nil, mask: Node? = nil, action: Action? = nil, accessibility: Accessibility? = nil, metadata: Metadata? = nil, url: String, httpMethod: HTTPMethod = .get, httpBody: String? = nil, headers: [Header]) {
+    public init(id: String = UUID().uuidString, name: String?, parent: Node? = nil, children: [Node] = [], ignoresSafeArea: Set<Edge>? = nil, aspectRatio: CGFloat? = nil, padding: Padding? = nil, frame: Frame? = nil, layoutPriority: CGFloat? = nil, offset: CGPoint? = nil, shadow: Shadow? = nil, opacity: CGFloat? = nil, background: Background? = nil, overlay: Overlay? = nil, mask: Node? = nil, action: Action? = nil, accessibility: Accessibility? = nil, metadata: Metadata? = nil, url: String, httpMethod: HTTPMethod = .get, httpBody: String? = nil, headers: [Header], pollInterval: Int?) {
         self.url = url
         self.httpMethod = httpMethod
         self.httpBody = httpBody
         self.headers = headers
+        self.pollInterval = pollInterval
         super.init(id: id, name: name, parent: parent, children: children, ignoresSafeArea: ignoresSafeArea, aspectRatio: aspectRatio, padding: padding, frame: frame, layoutPriority: layoutPriority, offset: offset, shadow: shadow, opacity: opacity, background: background, overlay: overlay, mask: mask, action: action, accessibility: accessibility, metadata: metadata)
     }
     
@@ -55,6 +56,7 @@ public class DataSource: Layer, ObservableObject {
         case httpMethod
         case httpBody
         case headers
+        case pollInterval
     }
 
     required init(from decoder: Decoder) throws {
@@ -63,6 +65,7 @@ public class DataSource: Layer, ObservableObject {
         httpMethod = try container.decode(HTTPMethod.self, forKey: .httpMethod)
         httpBody = try container.decodeIfPresent(String.self, forKey: .httpBody)
         headers = try container.decode([Header].self, forKey: .headers)
+        pollInterval = try container.decodeIfPresent(Int.self, forKey: .pollInterval)
         try super.init(from: decoder)
     }
 }

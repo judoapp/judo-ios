@@ -40,8 +40,11 @@ extension URLRequest {
     }
     
     private mutating func addAPIHeaders() {
+        guard let accessToken = Judo.sharedInstance.configuration.accessToken else {
+            return
+        }
         addValue("application/json", forHTTPHeaderField: "Accept")
-        addValue(Judo.sharedInstance.configuration.accessToken, forHTTPHeaderField: "Judo-Access-Token")
+        addValue(accessToken, forHTTPHeaderField: "Judo-Access-Token")
     }
     
     private mutating func addAPIVersionParameter() {

@@ -20,16 +20,25 @@ import SwiftUI
 @available(iOS 13.0, *)
 struct DataSourceView: View {
     var dataSource: JudoModel.DataSource
+    var dataSourceUrlString: String? {
+        get {
+            return dataSource.url.evaluatingExpressions(data: parentData, urlParameters: urlParameters, userInfo: userInfo)
+        }
+    }
+    
     @Environment(\.data) private var parentData
     @Environment(\.urlParameters) private var urlParameters
     @Environment(\.userInfo) private var userInfo
     @Environment(\.authorize) private var authorize
     
     @State private var cancellables: Set<AnyCancellable> = []
-
+    
     // Fetched data
     @State private var fetchedData: Any??
-
+    
+    // Autorefresh timer
+    @State private var refreshTimer: Timer?
+    
     @ViewBuilder
     var body: some View {
         if let fetchedData = fetchedData {
@@ -46,19 +55,29 @@ struct DataSourceView: View {
                     self.fetchedData = fetchedData
                 }.store(in: &cancellables)
             }
+            .onDisappear() {
+                refreshTimer?.invalidate()
+                refreshTimer = nil
+            }
+            .onAppear() {
+                setRefreshTimer()
+            }
         } else {
             redactedView
                 .onReceive(publisher) { result in
                     guard case let Result.success(fetchedData) = result else {
                         return
                     }
+                    
+                    setRefreshTimer()
+                    
                     self.fetchedData = fetchedData
                 }
         }
     }
     
     private var publisher: AnyPublisher<Result<Any?, Error>, Never> {
-        guard let urlString = dataSource.url.evaluatingExpressions(data: parentData, urlParameters: urlParameters, userInfo: userInfo), let url = URL(string: urlString) else {
+        guard let urlString = dataSourceUrlString, let url = URL(string: urlString) else {
             return Just(Result.failure(UnableToInterpolateDataSourceURLError())).eraseToAnyPublisher()
         }
         
@@ -73,7 +92,7 @@ struct DataSourceView: View {
             guard let value = header.value.evaluatingExpressions(data: parentData, urlParameters: urlParameters, userInfo: userInfo) else {
                 return result
             }
-                
+            
             var nextResult = result ?? [:]
             nextResult[header.key] = value
             return nextResult
@@ -97,6 +116,14 @@ struct DataSourceView: View {
         } else {
             // TODO: Anything better we can do here?
             EmptyView()
+        }
+    }
+    
+    private func setRefreshTimer() {
+        if let pollInterval = dataSource.pollInterval, refreshTimer == nil {
+            refreshTimer = Timer.scheduledTimer(withTimeInterval: TimeInterval(pollInterval), repeats:true ) { _ in
+                dataSource.objectWillChange.send()
+            }
         }
     }
 }

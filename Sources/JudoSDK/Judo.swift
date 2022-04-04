@@ -54,18 +54,37 @@ public final class Judo {
         initialize(configuration: configuration)
     }
     
+    /// Initialize the Judo SDK without an accessToken and domain name.
+    /// This is intended for bundled experiences.
+    ///
+    /// For additional configuration parameters, switch to ``initialize(configuration:)``.
+    public static func initialize() {
+        let configuration = Configuration(
+            accessToken: nil,
+            domain: nil
+        )
+        
+        initialize(configuration: configuration)
+    }
+    
     /// Initialize the Judo SDK with the given ``Configuration``.
     public static func initialize(configuration: Configuration) {
         _instance = Judo(configuration: configuration)
     }
     
-    let analytics = Analytics()
+    let analytics: Analytics?
     
     private init(configuration: Configuration) {
         self.configuration = configuration
         
-        if #available(iOS 13.0, *) {
-            observeScreenViews()
+        if configuration.accessToken != nil, configuration.domain != nil {
+            analytics = Analytics()
+            
+            if #available(iOS 13.0, *) {
+                observeScreenViews()
+            }
+        } else {
+            analytics = nil
         }
     }
     
@@ -79,11 +98,19 @@ public final class Judo {
     
     @available(iOS 13.0, *)
     private func observeScreenViews() {
+        if self.configuration.accessToken == nil, self.configuration.domain == nil {
+            return
+        }
+        
         screenViewedObserver = NotificationCenter.default.addObserver(
             forName: Judo.screenViewedNotification,
             object: nil,
             queue: OperationQueue.main,
             using: { [unowned self] notification in
+                if configuration.domain == nil, configuration.accessToken == nil {
+                    return
+                }
+                
                 switch configuration.analyticsMode {
                 case .default, .anonymous:
                     break
@@ -166,6 +193,11 @@ public final class Judo {
     /// - Parameters:
     ///   - completion: Completion handler.
     public func performSync(completion: (() -> Void)? = nil) {
+        if self.configuration.accessToken == nil, self.configuration.domain == nil {
+            judo_log(.debug, "Ingoring sync request if the access token and domain are not set.")
+            return
+        }
+        
         if #available(iOS 13.0, *) {
             repository.syncService.sync {
                 completion?()
@@ -189,7 +221,7 @@ public final class Judo {
         // urls (Images) and enqueue to download with low priority
         
         guard #available(iOS 13.0, *) else {
-            judo_log(.debug, "Judo runs in skeleton mode on iOS <13, ignoring asset prefetch request.")
+            judo_log(.error, "Judo runs in skeleton mode on iOS <13, ignoring asset prefetch request.")
             completion?()
             return
         }
@@ -286,8 +318,8 @@ public final class Judo {
     /// - Parameter timeInterval: The time interval after what run the task.
     public func registerAppRefreshTask(taskIdentifier: String, timeInterval: TimeInterval = 15 * 60) {
         precondition(!taskIdentifier.isEmpty, "Missing task identifier.")
-        precondition(!configuration.accessToken.isEmpty, "Missing Judo access token.")
-        precondition(!configuration.domain.isEmpty, "Judo domain must not be empty string.")
+        precondition(!(configuration.accessToken?.isEmpty ?? true), "Missing Judo access token.")
+        precondition(!(configuration.domain?.isEmpty ?? true), "Judo domain must be provided.")
 
         if #available(iOS 13.0, *) {
             AppRefreshTask.registerBackgroundTask(taskIdentifier: taskIdentifier, timeInterval: timeInterval)
@@ -302,8 +334,9 @@ public final class Judo {
     // MARK: Computed Values
     
     internal var domainURL: URL {
-        guard let url = URL(string: "https://\(configuration.domain)") else {
-            fatalError("Invalid domain '\(configuration.domain)' given to Judo SDK.")
+        let urlString = configuration.domain ?? ""
+        guard let url = URL(string: "https://\(urlString)") else {
+            fatalError("Invalid domain '\(urlString)' given to Judo SDK.")
         }
         
         return url
@@ -398,6 +431,10 @@ public final class Judo {
     // MARK: Events
     
     func track(event: Event) {
+        guard let analytics = analytics else {
+            return
+        }
+
         let context = EventContext(deviceToken: deviceToken)
         
         var payload = EventPayload(
@@ -498,8 +535,14 @@ public final class Judo {
     
     @discardableResult
     public func openURL(_ url: URL, animated: Bool) -> Bool {
-        guard let components = NSURLComponents(url: url, resolvingAgainstBaseURL: true),
-              components.host == configuration.domain else {
+        guard let components = NSURLComponents(url: url, resolvingAgainstBaseURL: true) else {
+            return false
+        }
+        
+        if (components.scheme != "https") &&
+           ((components.host != configuration.domain) ||
+           (configuration.accessToken == nil)) {
+            judo_log(.error, "Deep links cannot safely be used with an unknown domain.")
             return false
         }
         
