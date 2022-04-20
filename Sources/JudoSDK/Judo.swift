@@ -533,17 +533,30 @@ public final class Judo {
         return openURL(url, animated: animated)
     }
     
+    /// Attempt to open a Judo URL, returning true if the SDK is going to handle this URL, or returning false if it cannot.
+    ///
+    /// You can use this to easily route any matching URLs to the Judo SDK just by checking the return value of this method.
     @discardableResult
     public func openURL(_ url: URL, animated: Bool) -> Bool {
-        guard let components = NSURLComponents(url: url, resolvingAgainstBaseURL: true) else {
+        guard let components = NSURLComponents(url: url, resolvingAgainstBaseURL: true),
+              let host = components.host?.lowercased(), let scheme = components.scheme?.lowercased() else {
             return false
         }
         
-        if (components.scheme != "https") &&
-           ((components.host != configuration.domain) ||
-           (configuration.accessToken == nil)) {
-            judo_log(.error, "Deep links cannot safely be used with an unknown domain.")
-            return false
+        // link matching rules:
+        // SDK configured with a domain: only match links (of either kind) that match domain.
+        // SDK configured without a domain: match ALL universal links, no deep links.
+
+        if (scheme != "https" && scheme != "http") {
+            // deep links:
+            guard configuration.domain == host else {
+                return false
+            }
+        } else {
+            // universal links:
+            if configuration.domain != nil && configuration.domain != host {
+                return false
+            }
         }
         
         components.scheme = "https"
