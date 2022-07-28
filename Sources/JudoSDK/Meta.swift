@@ -1,4 +1,4 @@
 enum Meta {
     public static let APIVersion: Int = 2
-    public static let SDKVersion: String = "1.8.1"
+    public static let SDKVersion: String = "1.8.2"
 }

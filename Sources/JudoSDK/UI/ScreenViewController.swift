@@ -146,6 +146,7 @@ open class ScreenViewController: UIViewController, UIScrollViewDelegate {
             return viewController.parent as? ExperienceViewController ??
                 viewController.parent?.parent as? ExperienceViewController ?? // get through NavBarController to the containing ExperienceViewController
                 viewController.presentingViewController as? ExperienceViewController ??
+                viewController.presentingViewController?.children.compactMap { $0 as? ExperienceViewController }.first ??
                 findExperienceViewController(from: viewController.presentingViewController)
         }
         

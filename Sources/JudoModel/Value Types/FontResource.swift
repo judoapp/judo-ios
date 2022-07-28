@@ -28,7 +28,7 @@ public enum FontResource: Decodable {
                 let url = try container.decode(URL.self, forKey: .url)
                 let fontName = try container.decode(String.self, forKey: .fontName)
                 self = .fontResource(url: url, fontName: fontName)
-            case "FontResourceCollection":
+            case "FontCollectionResource":
                 let url = try container.decode(URL.self, forKey: .url)
                 let fontNames = try container.decode([String].self, forKey: .fontNames)
                 self = .fontResourceCollection(url: url, fontNames: fontNames)
