@@ -13,9 +13,9 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-import SwiftUI
+import CoreGraphics
+import Foundation
 
-@available(iOS 13.0, *)
 public final class VStack: Layer {
     public let alignment: HorizontalAlignment
     /// The gap that should be placed between each item in the stack.
@@ -36,7 +36,7 @@ public final class VStack: Layer {
     
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        alignment = try container.decode(HorizontalAlignmentValue.self, forKey: .alignment).horizontalAlignment
+        alignment = try container.decode(HorizontalAlignment.self, forKey: .alignment)
         spacing = try container.decode(CGFloat.self, forKey: .spacing)        
         try super.init(from: decoder)
     }

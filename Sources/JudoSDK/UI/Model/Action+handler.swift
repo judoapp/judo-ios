@@ -65,7 +65,13 @@ extension Action {
                 }
             }
         case .presentWebsite:
-            guard let resolvedURLString = self.url?.evaluatingExpressions(data: data, urlParameters: urlParameters, userInfo: userInfo), let resolvedURL = URL(string: resolvedURLString) else {
+            guard let resolvedURLString = self.url?.evaluatingExpressions(data: data, urlParameters: urlParameters, userInfo: userInfo), var resolvedURLComponents = URLComponents(string: resolvedURLString) else {
+                return
+            }
+            if !(["https", "http"].contains(resolvedURLComponents.scheme)) {
+                resolvedURLComponents.scheme = "https"
+            }
+            guard let resolvedURL = resolvedURLComponents.url else {
                 return
             }
             

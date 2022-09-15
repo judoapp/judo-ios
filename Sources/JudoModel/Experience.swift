@@ -15,7 +15,6 @@
 
 import Foundation
 
-@available(iOS 13.0, *)
 public struct Experience: Decodable {
     public enum Appearance: String, Decodable {
         case light

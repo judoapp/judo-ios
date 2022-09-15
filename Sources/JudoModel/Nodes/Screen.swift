@@ -13,10 +13,9 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+import CoreGraphics
 import Foundation
-import SwiftUI
 
-@available(iOS 13.0, *)
 public final class Screen: Node {
     public let statusBarStyle: StatusBarStyle
     public let backButtonStyle: BackButtonStyle

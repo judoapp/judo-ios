@@ -1,6 +1,5 @@
-import SwiftUI
+import Foundation
 
-@available(iOS 13.0, *)
 public struct Overlay: Decodable {
     /// Background layer node
     public let node: Node
@@ -23,6 +22,6 @@ public struct Overlay: Decodable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         node = try container.decodeNode(forKey: .node)
-        alignment = try container.decode(AlignmentValue.self, forKey: .alignment).alignment
+        alignment = try container.decode(Alignment.self, forKey: .alignment)
     }
 }

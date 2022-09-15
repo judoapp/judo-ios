@@ -17,7 +17,6 @@ import Foundation
 import os.log
 
 /// Synchronization service.
-@available(iOS 13.0, *)
 final class SyncService {
 
     typealias SynchronizationToken = URL

@@ -13,9 +13,9 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-import SwiftUI
+import CoreGraphics
+import Foundation
 
-@available(iOS 13.0, *)
 public final class WebView: Layer {
     public enum Source: Equatable {
         case url(String)
@@ -47,7 +47,6 @@ public final class WebView: Layer {
     }
 }
 
-@available(iOS 13.0, *)
 extension WebView.Source: Decodable {
     private enum CodingKeys: String, CodingKey {
         case typeName = "__typeName"

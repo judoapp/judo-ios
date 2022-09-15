@@ -17,7 +17,6 @@ import Foundation
 import JudoModel
 import os.log
 
-@available(iOS 13.0, *)
 final public class JudoRepository {
 
     enum Error: Swift.Error {

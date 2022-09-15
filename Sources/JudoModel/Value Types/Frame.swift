@@ -13,9 +13,9 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-import SwiftUI
+import CoreGraphics
+import Foundation
 
-@available(iOS 13.0, *)
 public struct Frame: Decodable, Equatable {
     /// A fixed width for the frame.
     public let width: CGFloat?
@@ -77,6 +77,6 @@ public struct Frame: Decodable, Equatable {
             maxHeight = try container.decodeIfPresent(CGFloat.self, forKey: .maxHeight)
         }
 
-        alignment = try container.decode(AlignmentValue.self, forKey: .alignment).alignment
+        alignment = try container.decode(Alignment.self, forKey: .alignment)
     }
 }

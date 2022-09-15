@@ -17,7 +17,6 @@ import JudoModel
 import SwiftUI
 import Combine
 
-@available(iOS 13.0, *)
 open class ScreenViewController: UIViewController, UIScrollViewDelegate {
     let experience: Experience
     let screen: Screen
@@ -25,10 +24,11 @@ open class ScreenViewController: UIViewController, UIScrollViewDelegate {
     let urlParameters: [String: String]
     let userInfo: [String: Any]
     let authorize: (inout URLRequest) -> Void
-        
-    private let carouselState = CarouselState()
-    private var cancellables: Set<AnyCancellable> = []
-    
+
+    // This is a work around for holding onto the CarouselState
+    // which requires iOS 13 when the SDK supports a minimum of iOS 11
+    private var carouselState: AnyObject?
+
     public init(experience: Experience, screen: Screen, data: Any? = nil, urlParameters: [String: String], userInfo: [String: Any], authorize: @escaping (inout URLRequest) -> Void) {
         self.experience = experience
         self.screen = screen
@@ -38,37 +38,45 @@ open class ScreenViewController: UIViewController, UIScrollViewDelegate {
         self.authorize = authorize
         super.init(nibName: nil, bundle: nil)
         super.restorationIdentifier = screen.id
+
+        if #available(iOS 13, *) {
+            carouselState = CarouselState()
+        }
     }
-    
+
     public required init?(coder: NSCoder) {
         fatalError("Judo's ScreenViewController is not supported in Interface Builder or Storyboards.")
     }
-    
+
     open override var preferredStatusBarStyle: UIStatusBarStyle {
-        switch screen.statusBarStyle {
-        case .default:
-            return .default
-        case .light:
-            return .lightContent
-        case .dark:
-            return .darkContent
-        case .inverted:
-            return traitCollection.userInterfaceStyle == .dark
+        if #available(iOS 13, *) {
+            switch screen.statusBarStyle {
+            case .default:
+                return .default
+            case .light:
+                return .lightContent
+            case .dark:
+                return .darkContent
+            case .inverted:
+                return traitCollection.userInterfaceStyle == .dark
                 ? .darkContent
                 : .lightContent
+            }
+        } else {
+            return .default
         }
     }
-    
+
     open override func viewDidLoad() {
         super.viewDidLoad()
-        
+
         // Back Button Style
         switch screen.backButtonStyle {
         case .default(let title):
             if #available(iOS 14.0, *) {
                 navigationItem.backButtonDisplayMode = .default
             }
-            
+
             navigationItem.backButtonTitle = experience.localization.resolve(key: title)
         case .generic:
             if #available(iOS 14.0, *) {
@@ -79,37 +87,39 @@ open class ScreenViewController: UIViewController, UIScrollViewDelegate {
                 navigationItem.backButtonDisplayMode = .minimal
             }
         }
-        
+
         // Background Color
-        view.backgroundColor = screen.backgroundColor.uikitUIColor(
-            colorScheme: traitCollection.colorScheme,
-            colorSchemeContrast: traitCollection.colorSchemeContrast
-        )
-        
-        showOrHideNavBarIfNeeded()
-
-        self.configureNavBar()
-        let cancellable = NotificationCenter.default.publisher(for: Judo.didRegisterCustomFontNotification).sink { [unowned self] _ in
-            self.configureNavBar()
-        }
-        cancellables.insert(cancellable)
-
-        addChildren()
-    }
-    
-    open override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        
-        showOrHideNavBarIfNeeded()
-        
-        if let navBar = navBar {
-            navigationController?.navigationBar.adjustTintColor(
-                navBar: navBar,
-                traits: traitCollection
+        if #available(iOS 13, *) {
+            view.backgroundColor = screen.backgroundColor.uikitUIColor(
+                colorScheme: traitCollection.colorScheme,
+                colorSchemeContrast: traitCollection.colorSchemeContrast
             )
         }
+
+        showOrHideNavBarIfNeeded()
+
+        if #available(iOS 13, *) {
+            self.configureNavBar()
+            NotificationCenter.default.addObserver(self, selector: #selector(self.configureNavBar), name: Judo.didRegisterCustomFontNotification, object: nil)
+            addChildren()
+        }
     }
-    
+
+    open override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+
+        showOrHideNavBarIfNeeded()
+
+        if #available(iOS 13, *) {
+            if let navBar = navBar {
+                navigationController?.navigationBar.adjustTintColor(
+                    navBar: navBar,
+                    traits: traitCollection
+                )
+            }
+        }
+    }
+
     open override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
 
@@ -124,7 +134,9 @@ open class ScreenViewController: UIViewController, UIScrollViewDelegate {
         )
     }
 
-    private func configureNavBar() {
+
+    @available(iOS 13, *)
+    @objc private func configureNavBar() {
         if let navBar = navBar {
             navigationItem.configure(
                 navBar: navBar,
@@ -137,7 +149,7 @@ open class ScreenViewController: UIViewController, UIScrollViewDelegate {
             )
         }
     }
-    
+
     private var experienceViewController: ExperienceViewController? {
         func findExperienceViewController(from viewController: UIViewController?) -> ExperienceViewController? {
             guard let viewController = viewController else {
@@ -149,84 +161,91 @@ open class ScreenViewController: UIViewController, UIScrollViewDelegate {
                 viewController.presentingViewController?.children.compactMap { $0 as? ExperienceViewController }.first ??
                 findExperienceViewController(from: viewController.presentingViewController)
         }
-        
+
         guard let experienceViewController = findExperienceViewController(from: self) else {
             judo_log(.error, "Unable to obtain containing ExperienceViewController, actions may not work.")
             return nil
         }
         return experienceViewController
     }
-    
+
     private var experienceViewControllerHolder: ExperienceViewControllerHolder {
         get { return ExperienceViewControllerHolder(experienceViewController) }
     }
-    
+
     private var screenViewControllerHolder: ScreenViewControllerHolder {
         get { return ScreenViewControllerHolder(self) }
     }
-    
+
     // MARK: - Nav Bar
-    
+
     var navBar: NavBar? {
         screen.children.first { $0 is NavBar } as? NavBar
     }
-    
+
     private func showOrHideNavBarIfNeeded() {
         navigationController?.isNavigationBarHidden = navBar == nil
     }
-    
+
     private func navBarButtonTapped(_ navBarButton: NavBarButton) {
         guard let experienceViewController = experienceViewController else {
             return
         }
-        switch navBarButton.style {
-        case .close, .done:
-            dismiss(animated: true)
-        case .custom:
-            navBarButton.action?.handle(
-                experience: self.experience,
-                node: navBarButton,
-                screen: screen,
-                data: data,
-                urlParameters: urlParameters,
-                userInfo: userInfo,
-                authorize: authorize,
-                experienceViewController: experienceViewController,
-                screenViewController: self
-            )
+
+        if #available(iOS 13, *) {
+            switch navBarButton.style {
+            case .close, .done:
+                dismiss(animated: true)
+            case .custom:
+                navBarButton.action?.handle(
+                    experience: self.experience,
+                    node: navBarButton,
+                    screen: screen,
+                    data: data,
+                    urlParameters: urlParameters,
+                    userInfo: userInfo,
+                    authorize: authorize,
+                    experienceViewController: experienceViewController,
+                    screenViewController: self
+                )
+            }
         }
     }
-    
+
     open func scrollViewDidScroll(_ scrollView: UIScrollView) {
         guard let navBar = navBar, navBar.titleDisplayMode == .inline else {
             return
         }
-        
+
+        if #available(iOS 13, *) {
         let isScrolling = scrollView.contentOffset.y + scrollView.adjustedContentInset.top > 0
-        navigationItem.configureInlineAppearance(
-            navBar: navBar,
-            traits: traitCollection,
-            isScrolling: isScrolling
-        )
-        
-        navigationController?.navigationBar.adjustTintColor(
-            navBar: navBar,
-            traits: traitCollection,
-            isScrolling: isScrolling
-        )
+            navigationItem.configureInlineAppearance(
+                navBar: navBar,
+                traits: traitCollection,
+                isScrolling: isScrolling
+            )
+
+            navigationController?.navigationBar.adjustTintColor(
+                navBar: navBar,
+                traits: traitCollection,
+                isScrolling: isScrolling
+            )
+        }
     }
-    
+
     // MARK: - Children
-    
+
+    @available(iOS 13, *)
     private func addChildren() {
         screen.children.compactMap { $0 as? Layer }.reversed().forEach { [unowned self] layer in
             addLayer(layer)
         }
     }
-    
+
+    @available(iOS 13, *)
     private func addLayer(_ layer: Layer) {
         let rootView = viewForLayer(layer).environment(\.data, data)
-        
+
         let hostingController = UIHostingController(
             rootView: rootView,
             ignoreSafeArea: true
@@ -269,6 +288,7 @@ open class ScreenViewController: UIViewController, UIScrollViewDelegate {
         hostingController.didMove(toParent: self)
     }
 
+    @available(iOS 13, *)
     @ViewBuilder
     private func viewForLayer(_ layer: Layer) -> some View {
         if isRootScrollContainer(layer) {
@@ -281,10 +301,11 @@ open class ScreenViewController: UIViewController, UIScrollViewDelegate {
         }
     }
 
+    @available(iOS 13, *)
     private func _viewForLayer(_ layer: Layer) -> some View {
         SwiftUI.ZStack {
             LayerView(layer: layer)
-                .environmentObject(carouselState)
+                .environmentObject(carouselState as! CarouselState)
                 .environment(\.presentAction, { [weak self] viewController in
                     self?.present(viewController, animated: true)
                 })
@@ -301,12 +322,12 @@ open class ScreenViewController: UIViewController, UIScrollViewDelegate {
                 .environment(\.authorize, authorize)
         }
     }
-    
+
     private func isRootScrollContainer(_ node: Node) -> Bool {
         guard let scrollContainer = node as? ScrollContainer else {
             return false
         }
-        
+
         return scrollContainer.axis == .vertical
             && scrollContainer.aspectRatio == nil
             && scrollContainer.padding == nil

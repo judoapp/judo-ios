@@ -21,7 +21,7 @@ struct HStackView: View {
     var stack: JudoModel.HStack
     
     var body: some View {
-        SwiftUI.HStack(alignment: stack.alignment, spacing: stack.spacing) {
+        SwiftUI.HStack(alignment: stack.alignment.swiftUIValue, spacing: stack.spacing) {
             ForEach(orderedLayers) {
                 LayerView(layer: $0)
             }

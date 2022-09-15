@@ -14,10 +14,8 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import Foundation
-import SwiftUI
 import CoreGraphics
 
-@available(iOS 13.0, *)
 public class Node: Decodable, Identifiable {
     /// A UUID for this node.
     public let id: String
@@ -112,8 +110,8 @@ public class Node: Decodable, Identifiable {
         let coordinator = decoder.userInfo[.decodingCoordinator] as! DecodingCoordinator
         
         // Layout
-        if let edgeValueSet = try container.decodeIfPresent(Set<EdgeValue>.self, forKey: .ignoresSafeArea) {
-            ignoresSafeArea = Set(edgeValueSet.compactMap{ $0.edge })
+        if let edgeValueSet = try container.decodeIfPresent(Set<Edge>.self, forKey: .ignoresSafeArea) {
+            ignoresSafeArea = Set(edgeValueSet.compactMap{ $0 })
         } else {
             ignoresSafeArea = nil
         }

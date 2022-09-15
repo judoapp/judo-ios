@@ -50,7 +50,7 @@ struct ScrollContainerView: View {
         }
     }
     
-    private var axis: Axis.Set {
+    private var axis: SwiftUI.Axis.Set {
         switch scrollContainer.axis {
         case .horizontal:
             return .horizontal

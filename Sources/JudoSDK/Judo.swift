@@ -151,10 +151,8 @@ public final class Judo {
         }
     }
 
-    @available(iOS 13.0, *)
     internal lazy var repository: JudoRepository = JudoRepository()
-    
-    @available(iOS 13.0, *)
+
     internal lazy var downloader: AssetsDownloader = AssetsDownloader(cache: assetsURLCache)
 
     static let userDefaults = UserDefaults(suiteName: "app.judo.JudoSDK")!
@@ -174,12 +172,10 @@ public final class Judo {
     public lazy var imageFetchAndDecodeQueue: DispatchQueue = DispatchQueue(label: "app.judo.ImageFetchAndDecode", attributes: .concurrent)
     
     /// To customize the Nav Bar View Controller, replace this function reference with a custom one that instantiates your own NavBarViewController subclass.
-    @available(iOS 13.0, *)
     public lazy var navBarViewController: (_ experience: Experience, _ screen: Screen, _ data: Any?, _ urlParameters: [String: String], _ userInfo: [String: Any], _ authorize: @escaping (inout URLRequest) -> Void) -> NavBarViewController =
         NavBarViewController.init(experience:screen:data:urlParameters:userInfo:authorize:)
     
     /// To customize the Screen View Controller, replace this function reference with a custom one that instantiates your own ScreenViewController subclass.
-    @available(iOS 13.0, *)
     public lazy var screenViewController: (_ experience: Experience, _ screen: Screen, _ data: Any?, _ urlParameters: [String: String], _ userInfo: [String: Any], _ authorize: @escaping (inout URLRequest) -> Void) -> ScreenViewController = ScreenViewController.init(experience:screen:data:urlParameters:userInfo:authorize:)
     
     // MARK: Methods

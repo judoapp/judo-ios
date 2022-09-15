@@ -16,7 +16,6 @@
 import Foundation
 import os.log
 
-@available(iOS 13.0, *)
 final class DecodingCoordinator {
     private var pendingRelationships = [PendingRelationship]()
     
@@ -78,14 +77,12 @@ final class DecodingCoordinator {
     }
 }
 
-@available(iOS 13.0, *)
 fileprivate protocol PendingRelationship {
     func resolve(
         nodes: [Node.ID: Node]
     )
 }
 
-@available(iOS 13.0, *)
 fileprivate struct OneToOneRelationship<T, U>: PendingRelationship where U: Node {
     var object: T
     var keyPath: ReferenceWritableKeyPath<T, U?>
@@ -111,7 +108,6 @@ fileprivate struct OneToOneRelationship<T, U>: PendingRelationship where U: Node
     }
 }
 
-@available(iOS 13.0, *)
 fileprivate struct OneToManyRelationship<T, U>: PendingRelationship where U: Node {
     var object: T
     var keyPath: ReferenceWritableKeyPath<T, [U]>
@@ -147,7 +143,6 @@ fileprivate struct OneToManyRelationship<T, U>: PendingRelationship where U: Nod
     }
 }
 
-@available(iOS 13.0, *)
 fileprivate struct ManyToOneRelationship<T, U>: PendingRelationship where U: Node {
     var object: T
     var keyPath: ReferenceWritableKeyPath<T, U?>

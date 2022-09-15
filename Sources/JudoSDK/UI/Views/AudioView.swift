@@ -38,7 +38,7 @@ struct AudioView: View {
             )
             .onDisappear { isVisible = false }
             .onAppear { isVisible = true }
-            .frame(height: 44)
+            .modifier(AudioPlayerFrameModifier())
         }
     }
 }
@@ -83,5 +83,18 @@ private class AudioPlayerViewController: AVPlayerViewController {
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+}
+
+@available(iOS 13.0, *)
+fileprivate struct AudioPlayerFrameModifier: ViewModifier {
+    
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(iOS 16.0, *) {
+            content.frame(height: 110)
+        } else {
+            content.frame(height: 44)
+        }
     }
 }

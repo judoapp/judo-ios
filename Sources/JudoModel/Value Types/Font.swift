@@ -15,13 +15,11 @@
 
 import Foundation
 import CoreGraphics
-import SwiftUI
 
 public typealias FontFamily = String
 
 public typealias FontName = String
 
-@available(iOS 13.0, *)
 public enum Font: Decodable, Hashable {
 
     public enum Emphasis: String, Hashable, Decodable {
@@ -30,10 +28,10 @@ public enum Font: Decodable, Hashable {
     }
 
     /// A system font with a given semantic style that responds to the Dynamic Type system on iOS and the equivalent on Android.
-    case dynamic(textStyle: SwiftUI.Font.TextStyle, emphases: Set<Font.Emphasis>)
+    case dynamic(textStyle: FontTextStyle, emphases: Set<Font.Emphasis>)
 
     /// A system font with a fixed size and weight.
-    case fixed(size: CGFloat, weight: SwiftUI.Font.Weight)
+    case fixed(size: CGFloat, weight: FontWeight)
 
     /// A custom font which uses the supplied `FontName` and given `size`.
     case custom(fontName: FontName, size: CGFloat, isDynamic: Bool)
@@ -68,12 +66,12 @@ public enum Font: Decodable, Hashable {
         let typeName = try container.decode(String.self, forKey: .typeName)
         switch typeName {
         case "DynamicFont":
-            let textStyle = try container.decode(TextStyleValue.self, forKey: .textStyle).textStyle
+            let textStyle = try container.decode(FontTextStyle.self, forKey: .textStyle)
             let emphases = try container.decode(Set<Font.Emphasis>.self, forKey: .emphases)
             self = .dynamic(textStyle: textStyle, emphases: emphases)
         case "FixedFont":
             let size = try container.decode(CGFloat.self, forKey: .size)
-            let weight = try container.decode(WeightValue.self, forKey: .weight).weight
+            let weight = try container.decode(FontWeight.self, forKey: .weight)
             self = .fixed(size: size, weight: weight)
         case "CustomFont":
             let fontName = try container.decode(FontName.self, forKey: .fontName)

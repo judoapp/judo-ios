@@ -13,263 +13,242 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-import SwiftUI
 import os.log
+import SwiftUI
 
 // MARK: Axis
 
-@available(iOS 13.0, *)
-struct AxisValue: Decodable {
-    public let axis: Axis
-    
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        let value = try container.decode(String.self)
-        
-        switch value {
-        case "horizontal":
-            axis = .horizontal
-        case "vertical":
-            axis = .vertical
-        default:
-            axis = .vertical
-            judo_log(.error, "Unsupported axis: %@", value)
+public enum Axis: String, Decodable {
+    case horizontal
+    case vertical
+
+    @available(iOS 13.0, *)
+    public var swiftUIValue: SwiftUI.Axis {
+        switch self {
+        case .horizontal:
+            return .horizontal
+        case .vertical:
+            return .vertical
         }
     }
 }
 
 // MARK: TextAlignment
 
-@available(iOS 13.0, *)
-struct TextAlignmentValue: Decodable {
-    public let textAlignment: TextAlignment
-    
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        let value = try container.decode(String.self)
-        
-        switch value {
-        case "center":
-            textAlignment = .center
-        case "leading":
-            textAlignment = .leading
-        case "trailing":
-            textAlignment = .trailing
-        default:
-            textAlignment = .center
-            judo_log(.error, "Unsupported text alignment: %@", value)
+public enum TextAlignment: String, Decodable {
+    case center
+    case leading
+    case trailing
+
+    @available(iOS 13.0, *)
+    public var swiftUIValue: SwiftUI.TextAlignment {
+        switch self {
+        case .center:
+            return .center
+        case .leading:
+            return .leading
+        case .trailing:
+            return .trailing
         }
     }
 }
 
 // MARK: HorizontalAlignment
 
-@available(iOS 13.0, *)
-struct HorizontalAlignmentValue: Decodable {
-    public let horizontalAlignment: HorizontalAlignment
-    
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        let rawValue = try container.decode(String.self)
-        
-        switch rawValue {
-        case "center":
-            horizontalAlignment = .center
-        case "leading":
-            horizontalAlignment = .leading
-        case "trailing":
-            horizontalAlignment = .trailing
-        default:
-            judo_log(.error, "Unsupported horizontal alignment: %@", rawValue)
-            horizontalAlignment = .center
+public enum HorizontalAlignment: String, Decodable {
+    case center
+    case leading
+    case trailing
+
+    @available(iOS 13.0, *)
+    public var swiftUIValue: SwiftUI.HorizontalAlignment {
+        switch self {
+        case .center:
+            return .center
+        case .leading:
+            return .leading
+        case .trailing:
+            return .trailing
         }
     }
 }
 
 // MARK: VerticalAlignment
 
-@available(iOS 13.0, *)
-struct VerticalAlignmentValue: Decodable {
-    public let verticalAlignment: VerticalAlignment
-    
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        let rawValue = try container.decode(String.self)
-        
-        switch rawValue {
-        case "bottom":
-            verticalAlignment = .bottom
-        case "center":
-            verticalAlignment = .center
-        case "baseline":
-            verticalAlignment = .firstTextBaseline
-        case "top":
-            verticalAlignment = .top
-        default:
-            judo_log(.error, "Unsupported vertical alignment: %@", rawValue)
-            verticalAlignment = .bottom
+public enum VerticalAlignment: String, Decodable {
+    case bottom
+    case center
+    case firstTextBaseline = "baseline"
+    case top
+
+    @available(iOS 13.0, *)
+    public var swiftUIValue: SwiftUI.VerticalAlignment {
+        switch self {
+        case .bottom:
+            return .bottom
+        case .center:
+            return .center
+        case .firstTextBaseline:
+            return .firstTextBaseline
+        case .top:
+            return .top
         }
     }
 }
 
+
 // MARK: Alignment
 
-@available(iOS 13.0, *)
-struct AlignmentValue: Decodable {
-    public let alignment: Alignment
-    
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        let rawValue = try container.decode(String.self)
-        
-        switch rawValue {
-        case "bottom":
-            alignment = .bottom
-        case "bottomLeading":
-            alignment = .bottomLeading
-        case "bottomTrailing":
-            alignment = .bottomTrailing
-        case "center":
-            alignment = .center
-        case "leading":
-            alignment = .leading
-        case "top":
-            alignment = .top
-        case "topLeading":
-            alignment = .topLeading
-        case "topTrailing":
-            alignment = .topTrailing
-        case "trailing":
-            alignment = .trailing
-        default:
-            judo_log(.error, "Unsupported alignment: %@", rawValue)
-            alignment = .center
+public enum Alignment: String, Decodable {
+    case bottom
+    case bottomLeading
+    case bottomTrailing
+    case center
+    case leading
+    case top
+    case topLeading
+    case topTrailing
+    case trailing
+
+
+    @available(iOS 13.0, *)
+    public var swiftUIValue: SwiftUI.Alignment {
+        switch self {
+        case .bottom:
+            return .bottom
+        case .bottomLeading:
+            return .bottomLeading
+        case .bottomTrailing:
+            return .bottomTrailing
+        case .center:
+            return .center
+        case .leading:
+            return .leading
+        case .top:
+            return .top
+        case .topLeading:
+            return .topLeading
+        case .topTrailing:
+            return .topTrailing
+        case .trailing:
+            return .trailing
         }
     }
 }
 
 // MARK: Edge
 
-@available(iOS 13.0, *)
-struct EdgeValue: Decodable, Identifiable, Hashable {
-    public let edge: Edge
-    
-    public var id: Int8 {
-        edge.rawValue
-    }
-    
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        let rawValue = try container.decode(String.self)
-        
-        switch rawValue {
-        case "top":
-            edge = .top
-        case "leading":
-            edge = .leading
-        case "bottom":
-            edge = .bottom
-        case "trailing":
-            edge = .trailing
-        default:
-            edge = .leading
-            judo_log(.error, "Unsupported edge: %@", rawValue)
-        }
-    }
-    
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(edge.rawValue)
-    }
-}
+public enum Edge: String, Decodable { // does this require Identifiable, Hashable conformances?
+    case top
+    case leading
+    case bottom
+    case trailing
 
-// MARK: SwiftUI.Font.TextStyle
-
-@available(iOS 13.0, *)
-struct TextStyleValue: Decodable {
-    public let textStyle: SwiftUI.Font.TextStyle
-    
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        let value = try container.decode(String.self)
-
-        switch value {
-        case "largeTitle":
-            textStyle = .largeTitle
-        case "title":
-            textStyle = .title
-        case "title2":
-            if #available(iOS 14.0, *) {
-                textStyle = .title2
-            } else {
-                textStyle = .title
-            }
-        case "title3":
-            if #available(iOS 14.0, *) {
-                textStyle = .title3
-            } else {
-                textStyle = .title
-            }
-        case "headline":
-            textStyle = .headline
-        case "body":
-            textStyle = .body
-        case "callout":
-            textStyle = .callout
-        case "subheadline":
-            textStyle = .subheadline
-        case "footnote":
-            textStyle = .footnote
-        case "caption":
-            textStyle = .caption
-        case "caption2":
-            if #available(iOS 14.0, *) {
-                textStyle = .caption2
-            } else {
-                textStyle = .caption
-            }
-        default:
-            throw DecodingError.dataCorruptedError(
-                in: container,
-                debugDescription: "Invalid value: \(value.self)"
-            )
+    @available(iOS 13.0, *)
+    public var swiftUIValue: SwiftUI.Edge {
+        switch self {
+        case .top:
+            return .top
+        case .leading:
+            return .leading
+        case .bottom:
+            return .bottom
+        case .trailing:
+            return .trailing
         }
     }
 }
 
-// MARK: SwiftUI.Font.Weight
+// MARK: FontTextStyle
 
-@available(iOS 13.0, *)
-struct WeightValue: Decodable {
-    public var weight: SwiftUI.Font.Weight
-    
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        let value = try container.decode(String.self)
+public enum FontTextStyle: String, Decodable {
+    case largeTitle
+    case title
+    case title2
+    case title3
+    case headline
+    case body
+    case callout
+    case subheadline
+    case footnote
+    case caption
+    case caption2
 
-        switch value {
-        case "ultraLight":
-            weight = .ultraLight
-        case "thin":
-            weight = .thin
-        case "light":
-            weight = .light
-        case "regular":
-            weight = .regular
-        case "medium":
-            weight = .medium
-        case "semibold":
-            weight = .semibold
-        case "bold":
-            weight = .bold
-        case "heavy":
-            weight = .heavy
-        case "black":
-            weight = .black
-        default:
-            throw DecodingError.dataCorruptedError(
-                in: container,
-                debugDescription: "Invalid value: \(value.self)"
-            )
+    @available(iOS 13.0, *)
+    public var swiftUIValue: SwiftUI.Font.TextStyle {
+        switch self {
+        case .largeTitle:
+            return .largeTitle
+        case .title:
+            return .title
+        case .title2:
+            if #available(iOS 14.0, *) {
+                return .title2
+            } else {
+                return .title
+            }
+        case .title3:
+            if #available(iOS 14.0, *) {
+                return .title3
+            } else {
+                return .title
+            }
+        case .headline:
+            return .headline
+        case .body:
+            return .body
+        case .callout:
+            return .callout
+        case .subheadline:
+            return .subheadline
+        case .footnote:
+            return .footnote
+        case .caption:
+            return .caption
+        case .caption2:
+            if #available(iOS 14.0, *) {
+                return .caption2
+            } else {
+                return .caption
+            }
+        }
+    }
+}
+
+// MARK: FontWeight
+
+public enum FontWeight: String, Decodable {
+    case ultraLight
+    case thin
+    case light
+    case regular
+    case medium
+    case semibold
+    case bold
+    case heavy
+    case black
+
+    @available(iOS 13.0, *)
+    public var swiftUIValue: SwiftUI.Font.Weight {
+        switch self {
+        case .ultraLight:
+            return .ultraLight
+        case .thin:
+            return .thin
+        case .light:
+            return .light
+        case .regular:
+            return .regular
+        case .medium:
+            return .medium
+        case .semibold:
+            return .semibold
+        case .bold:
+            return .bold
+        case .heavy:
+            return .heavy
+        case .black:
+            return .black
         }
     }
 }

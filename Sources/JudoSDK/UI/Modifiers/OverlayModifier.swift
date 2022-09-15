@@ -41,7 +41,7 @@ struct OverlayModifier: ViewModifier {
         if let overlay = node.overlay, let layer = overlay.node as? Layer {
             content.overlay(
                 overlayContents(layer: layer),
-                alignment: overlay.alignment
+                alignment: overlay.alignment.swiftUIValue
             )
         } else {
             content

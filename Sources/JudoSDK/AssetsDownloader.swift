@@ -16,7 +16,6 @@
 import Foundation
 import os.log
 
-@available(iOS 13.0, *)
 final class AssetsDownloader {
 
     enum Priority: String, Comparable {

@@ -23,7 +23,7 @@ struct IgnoresSafeAreaModifier: ViewModifier {
     @ViewBuilder
     func body(content: Content) -> some View {
         if let ignoredSafeAreaEdges = node.ignoresSafeArea {
-            content.edgesIgnoringSafeArea(Edge.Set(set: ignoredSafeAreaEdges))
+            content.edgesIgnoringSafeArea(SwiftUI.Edge.Set(set: ignoredSafeAreaEdges))
         } else {
             content
         }
@@ -31,10 +31,10 @@ struct IgnoresSafeAreaModifier: ViewModifier {
 }
 
 @available(iOS 13.0, *)
-private extension Edge.Set {
-    init(set: Set<Edge>) {
-        self = Edge.Set(set.map { edge in
-            Edge.Set.Element(edge)
+private extension SwiftUI.Edge.Set {
+    init(set: Set<JudoModel.Edge>) {
+        self = SwiftUI.Edge.Set(set.map { edge in
+            SwiftUI.Edge.Set.Element(edge.swiftUIValue)
         })
     }
 }

@@ -54,7 +54,7 @@ extension JudoModel.Font {
 }
 
 @available(iOS 13.0, *)
-extension SwiftUI.Font.TextStyle {
+extension FontTextStyle {
     var uiTextStyle: UIFont.TextStyle {
         switch self {
             case .largeTitle:
@@ -79,14 +79,12 @@ extension SwiftUI.Font.TextStyle {
                 return .caption1
             case .caption2:
                 return .caption2
-            @unknown default:
-                return .body
         }
     }
 }
 
 @available(iOS 13.0, *)
-extension SwiftUI.Font.Weight {
+extension FontWeight {
     var uiWeight: UIFont.Weight {
         switch self {
             case .black:
@@ -107,8 +105,6 @@ extension SwiftUI.Font.Weight {
                 return .thin
             case .ultraLight:
                 return .ultraLight
-            default:
-                return .regular
         }
     }
 }

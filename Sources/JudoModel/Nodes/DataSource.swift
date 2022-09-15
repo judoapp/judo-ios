@@ -16,7 +16,6 @@
 import SwiftUI
 import Combine
 
-@available(iOS 13.0, *)
 public class DataSource: Layer, ObservableObject {
     public enum HTTPMethod: String, Codable, CaseIterable {
         case get = "GET"

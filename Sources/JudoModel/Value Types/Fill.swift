@@ -16,7 +16,6 @@
 import Foundation
 import os.log
 
-@available(iOS 13.0, *)
 public enum Fill: Decodable, Hashable {    
     case flat(_ color: ColorVariants)
     case gradient(_ gradient: GradientVariants)

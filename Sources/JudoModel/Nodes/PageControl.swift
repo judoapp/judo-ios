@@ -13,10 +13,9 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+import CoreGraphics
 import Foundation
-import SwiftUI
 
-@available(iOS 13.0, *)
 public final class PageControl: Layer {
     /// The carousel node this Page Control is associated with.
     public var carousel: Carousel?
@@ -56,7 +55,6 @@ public final class PageControl: Layer {
     }
 }
 
-@available(iOS 13.0, *)
 public extension PageControl {
     enum Style: Decodable {
         case `default`

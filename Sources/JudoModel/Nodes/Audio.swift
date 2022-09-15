@@ -14,10 +14,9 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
+import CoreGraphics
 import Foundation
-import SwiftUI
 
-@available(iOS 13.0, *)
 public class Audio: Layer {
 
     /// Audio URL

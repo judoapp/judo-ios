@@ -14,9 +14,8 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import CoreGraphics
-import SwiftUI
+import Foundation
 
-@available(iOS 13.0, *)
 public final class Text: Layer {
     public enum Transform: String, Codable {
         case uppercase
@@ -27,7 +26,7 @@ public final class Text: Layer {
     public let font: Font
     public let textColor: ColorVariants
     /// The alignment behavior of the Text.
-    public let textAlignment: SwiftUI.TextAlignment
+    public let textAlignment: TextAlignment
     public let lineLimit: Int?
     public let transform: Transform?
     
@@ -57,7 +56,7 @@ public final class Text: Layer {
         text = try container.decode(String.self, forKey: .text)
         font = try container.decode(Font.self, forKey: .font)
         textColor = try container.decode(ColorVariants.self, forKey: .textColor)
-        textAlignment = try container.decode(TextAlignmentValue.self, forKey: .textAlignment).textAlignment
+        textAlignment = try container.decode(TextAlignment.self, forKey: .textAlignment)
         lineLimit = try container.decodeIfPresent(Int.self, forKey: .lineLimit)
         transform = try container.decodeIfPresent(Transform.self, forKey: .transform)
         try super.init(from: decoder)

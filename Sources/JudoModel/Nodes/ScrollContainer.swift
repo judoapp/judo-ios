@@ -13,9 +13,9 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-import SwiftUI
+import CoreGraphics
+import Foundation
 
-@available(iOS 13.0, *)
 public final class ScrollContainer: Layer {
     /// Indicates the scroll direction.
     public let axis: Axis
@@ -37,7 +37,7 @@ public final class ScrollContainer: Layer {
     
     required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        axis = try container.decode(AxisValue.self, forKey: .axis).axis
+        axis = try container.decode(Axis.self, forKey: .axis)
         disableScrollBar = try container.decode(Bool.self, forKey: .disableScrollBar)
         try super.init(from: decoder)
     }

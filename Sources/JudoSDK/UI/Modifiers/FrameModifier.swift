@@ -28,7 +28,7 @@ struct FrameModifier: ViewModifier {
                     .frame(
                         width: frame.width,
                         height: frame.height,
-                        alignment: frame.alignment
+                        alignment: frame.alignment.swiftUIValue
                     )
             } else {
                 content
@@ -37,7 +37,7 @@ struct FrameModifier: ViewModifier {
                         maxWidth: frame.maxWidth,
                         minHeight: frame.minHeight,
                         maxHeight: frame.maxHeight,
-                        alignment: frame.alignment
+                        alignment: frame.alignment.swiftUIValue
                     )
             }
         } else {

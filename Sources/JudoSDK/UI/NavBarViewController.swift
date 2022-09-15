@@ -15,38 +15,44 @@
 
 import Combine
 import JudoModel
-import SwiftUI
+import UIKit
 
-@available(iOS 13.0, *)
 open class NavBarViewController: UINavigationController, UIScrollViewDelegate {
-    private var cancellables = Set<AnyCancellable>()
-    
+
+    // This is a work around for holding onto the LargeTitleDisplayObserver
+    // as it requires iOS 13 when the SDK supports a minimum of iOS 11
+    private var titleDisplayObserver: AnyObject?
+
     public init(experience: Experience, screen: Screen, data: Any? = nil, urlParameters: [String: String], userInfo: [String: Any], authorize: @escaping (inout URLRequest) -> Void) {
         let screenVC = Judo.sharedInstance.screenViewController(experience, screen, data, urlParameters, userInfo, authorize)
         super.init(rootViewController: screenVC)
         restorationIdentifier = screen.id
-        
-        switch experience.appearance {
-        case .light:
-            overrideUserInterfaceStyle = .light
-        case .dark:
-            overrideUserInterfaceStyle = .dark
-        case .auto:
-            break
+
+        if #available(iOS 13, *) {
+            switch experience.appearance {
+            case .light:
+                overrideUserInterfaceStyle = .light
+            case .dark:
+                overrideUserInterfaceStyle = .dark
+            case .auto:
+                break
+            }
         }
     }
-    
+
     public required init?(coder aDecoder: NSCoder) {
         fatalError("Judo's NavBarViewController is not supported in Interface Builder or Storyboards.")
     }
-    
+
     open override func viewDidLoad() {
         super.viewDidLoad()
-        observeLargeTitleDisplay()
+        if #available(iOS 13, *) {
+            observeLargeTitleDisplay()
+        }
     }
-    
+
     // MARK: Status Bar
-    
+
     open override var childForStatusBarStyle: UIViewController? {
         visibleViewController
     }
@@ -54,16 +60,16 @@ open class NavBarViewController: UINavigationController, UIScrollViewDelegate {
     open override var childForStatusBarHidden: UIViewController? {
         visibleViewController
     }
-    
+
     // MARK: Navigation Bar
-    
+
     // The `setNavigationBarHidden(_:animated:)` method is called automatically
     // by `UIHostingController` when it is added to the controller hierarchy.
     // The locking mechanism below allows us to no-op the calls made by
     // `UIHostingController` while allowing our own calls to function normally.
-    
+
     private var isNavigationBarLocked = true
-    
+
     open override var isNavigationBarHidden: Bool {
         set {
             isNavigationBarLocked = false
@@ -77,46 +83,64 @@ open class NavBarViewController: UINavigationController, UIScrollViewDelegate {
 
             isNavigationBarLocked = true
         }
-        
+
         get {
             super.isNavigationBarHidden
         }
     }
-    
+
     open override func setNavigationBarHidden(_ hidden: Bool, animated: Bool) {
         guard !isNavigationBarLocked else {
             return
         }
-        
+
         super.setNavigationBarHidden(hidden, animated: animated)
     }
-    
+
+    @available(iOS 13, *)
     private func observeLargeTitleDisplay() {
-        navigationBar.publisher(for: \.frame)
-            .map { [unowned self] frame in
-                frame.height >= largeTitleBreakPoint
-            }
-            .removeDuplicates()
-            .sink { [unowned self] isDisplayingLargeTitle in
-                largeTitleDisplayDidChange(isDisplayingLargeTitle)
-            }
-            .store(in: &cancellables)
+       titleDisplayObserver = LargeTitleDisplayObserver(navigationBar: navigationBar, parent: parent) {  [unowned self] isDisplayingLargeTitle in
+            largeTitleDisplayDidChange(isDisplayingLargeTitle)
+        }
     }
-    
-    private var largeTitleBreakPoint: CGFloat {
-        parent?.modalPresentationStyle == .fullScreen ? 60 : 72
-    }
-    
+
+    @available(iOS 13, *)
     private func largeTitleDisplayDidChange(_ isDisplayingLargeTitle: Bool) {
         guard let screenVC = visibleViewController as? ScreenViewController,
               let navBar = screenVC.navBar else {
             return
         }
-        
+
         navigationBar.adjustTintColor(
             navBar: navBar,
             traits: traitCollection,
             isScrolling: !isDisplayingLargeTitle
         )
+    }
+}
+
+@available(iOS 13.0, *)
+private class LargeTitleDisplayObserver {
+
+    private var cancellables: Set<AnyCancellable> = []
+
+    private weak var parent: UIViewController?
+
+    init(navigationBar: UINavigationBar, parent: UIViewController?, largeTitleDisplayDidChange: @escaping (Bool) -> Void) {
+        self.parent = parent
+
+        navigationBar.publisher(for: \.frame)
+            .map { [unowned self] frame in
+                frame.height >= largeTitleBreakPoint
+            }
+            .removeDuplicates()
+            .sink { isDisplayingLargeTitle in
+                largeTitleDisplayDidChange(isDisplayingLargeTitle)
+            }
+            .store(in: &cancellables)
+    }
+
+    private var largeTitleBreakPoint: CGFloat {
+        parent?.modalPresentationStyle == .fullScreen ? 60 : 72
     }
 }

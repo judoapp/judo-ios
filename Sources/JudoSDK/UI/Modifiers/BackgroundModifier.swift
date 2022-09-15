@@ -25,7 +25,7 @@ struct BackgroundModifier: ViewModifier {
         if let background = node.background, let layer = background.node as? Layer {
             content.background(
                 LayerView(layer: layer).environment(\.isEnabled, false),
-                alignment: background.alignment
+                alignment: background.alignment.swiftUIValue
             )
         } else {
             content

@@ -25,7 +25,6 @@ internal struct ExperienceViewControllerHolder {
     }
 }
 
-@available(iOS 13.0, *)
 internal struct ScreenViewControllerHolder {
     weak var screenViewController: ScreenViewController?
     

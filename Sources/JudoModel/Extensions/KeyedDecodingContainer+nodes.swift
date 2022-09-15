@@ -15,7 +15,6 @@
 
 import Foundation
 
-@available(iOS 13.0, *)
 extension KeyedDecodingContainer {
     func decodeNode(forKey key: K) throws -> Node {
         let wrapper = try decode(NodeWrapper.self, forKey: key)
@@ -43,7 +42,6 @@ extension KeyedDecodingContainer {
     }
 }
 
-@available(iOS 13.0, *)
 private struct NodeWrapper: Decodable {
     let node: Node?
     
