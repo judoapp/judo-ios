@@ -35,8 +35,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         })
         
         Judo.initialize(configuration: configuration)
-        Judo.sharedInstance.performSync()
-        Judo.sharedInstance.registerAppRefreshTask(taskIdentifier: "app.judo.background.refresh")
         
         if #available(iOS 13.0, *) {
             // you can register a callback to be fired whenever a user taps/activates an Action
@@ -57,9 +55,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                 }
             }
         }
-        
-        application.registerForRemoteNotifications()
-        
+
         trackScreenViews()
         return true
     }
@@ -94,20 +90,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                     print("Screen tracked: \(properties)")
                 }
             )
-        }
-    }
-    
-    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        os_log("Failed to register for remote notifications, because: %@", type: .debug, error.localizedDescription)
-    }
-
-    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        Judo.sharedInstance.registeredForRemoteNotifications(deviceToken: deviceToken)
-    }
-
-    func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
-        Judo.sharedInstance.handleDidReceiveRemoteNotification(userInfo: userInfo) { result in
-            completionHandler(result)
         }
     }
 

@@ -38,16 +38,7 @@ struct ScrollContainerView: View {
                 }
             }
         }
-        .introspectScrollView { scrollView in
-            // Enabling a refresh control only applies to ScrollContainers at the root of the screen
-            if scrollContainer.parent is Screen,
-               self.axis == .vertical,
-               !scrollContainer.disableScrollBar,
-               hasDataSources
-            {
-                scrollView.refreshControl = refreshControl()
-            }
-        }
+        .modifier(RefreshModifier(scrollContainer: scrollContainer, axis: axis))
     }
     
     private var axis: SwiftUI.Axis.Set {
@@ -61,25 +52,6 @@ struct ScrollContainerView: View {
     
     private var orderedLayers: [Layer] {
         scrollContainer.children.compactMap { $0 as? Layer }
-    }
-
-    private var hasDataSources: Bool {
-        !scrollContainer.nestedDataSources.isEmpty
-    }
-
-    private func refreshControl() -> UIRefreshControl {
-        let refreshControl = UIRefreshControl()
-
-        refreshControl.addAction(for: .valueChanged) { sender in
-            guard let refreshControl = sender as? UIRefreshControl else { return }
-            refreshControl.endRefreshing()
-
-            scrollContainer.nestedDataSources.forEach {
-                $0.objectWillChange.send()
-            }
-        }
-
-        return refreshControl
     }
 }
 
@@ -99,5 +71,53 @@ private extension ScrollContainer {
             }
         }
         return dataSources
+    }
+}
+
+@available(iOS 13.0, *)
+fileprivate struct RefreshModifier: ViewModifier {
+    var scrollContainer: ScrollContainer
+    var axis: SwiftUI.Axis.Set
+    
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        // Enabling a refresh control only applies to ScrollContainers at the root of the screen
+        if scrollContainer.parent is Screen,
+            axis == .vertical,
+            !scrollContainer.disableScrollBar,
+            hasDataSources {
+            if #available(iOS 16.0, *) {
+                content.refreshable {
+                    scrollContainer.nestedDataSources.forEach {
+                        $0.objectWillChange.send()
+                    }
+                }
+            } else {
+                content.introspectScrollView { scrollView in
+                    scrollView.refreshControl = refreshControl()
+                }
+            }
+        } else {
+            content
+        }
+    }
+    
+    private var hasDataSources: Bool {
+        !scrollContainer.nestedDataSources.isEmpty
+    }
+
+    private func refreshControl() -> UIRefreshControl {
+        let refreshControl = UIRefreshControl()
+
+        refreshControl.addAction(for: .valueChanged) { sender in
+            guard let refreshControl = sender as? UIRefreshControl else { return }
+            refreshControl.endRefreshing()
+
+            scrollContainer.nestedDataSources.forEach {
+                $0.objectWillChange.send()
+            }
+        }
+
+        return refreshControl
     }
 }

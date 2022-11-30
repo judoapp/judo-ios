@@ -234,31 +234,24 @@ open class ExperienceViewController: UIViewController {
     
     @available(iOS 13.0, *)
     private func fetchExperience(request: FetchRequest) {
-        if !request.ignoreCache, let experience = Judo.sharedInstance.urlCache.cachedExperience(url: request.url) {
-            presentExperience(
-                experience: experience,
-                context: request.launchContext
-            )
-        } else {
-            // TODO: needs visual async state while waiting for loading.
-            Judo.sharedInstance.repository.retrieveExperience(url: request.url, ignoreCache: request.ignoreCache) { result in
-                switch result {
-                case .failure(let error):
-                    judo_log(.error, "Error while trying to launch Experience: %@", error.debugDescription)
-                    
-                    if let recoverableError = error as? RecoverableError, recoverableError.canRecover {
-                        self.presentRetrieveRetryDialog() {
-                            self.fetchExperience(request: request)
-                        }
-                    } else {
-                        self.presentRetrieveErrorDialog()
+        // TODO: needs visual async state while waiting for loading.
+        Judo.sharedInstance.repository.retrieveExperience(url: request.url) { result in
+            switch result {
+            case .failure(let error):
+                judo_log(.error, "Error while trying to launch Experience: %@", error.debugDescription)
+                
+                if let recoverableError = error as? RecoverableError, recoverableError.canRecover {
+                    self.presentRetrieveRetryDialog() {
+                        self.fetchExperience(request: request)
                     }
-                case .success(let experience):
-                    self.presentExperience(
-                        experience: experience,
-                        context: request.launchContext
-                    )
+                } else {
+                    self.presentRetrieveErrorDialog()
                 }
+            case .success(let experience):
+                self.presentExperience(
+                    experience: experience,
+                    context: request.launchContext
+                )
             }
         }
     }
@@ -277,7 +270,7 @@ open class ExperienceViewController: UIViewController {
 
         // Register experience fonts
         experience.fonts.forEach { url in
-            Judo.sharedInstance.downloader.enqueue(url: url, priority: .high) { result in
+            Judo.sharedInstance.downloader.download(url: url) { result in
                 do {
                     try self.registerFontIfNeeded(data: result.get())
                 } catch {

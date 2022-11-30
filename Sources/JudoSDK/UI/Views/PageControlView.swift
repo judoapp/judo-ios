@@ -320,7 +320,7 @@ private final class Images: ObservableObject {
             return
         }
 
-        Judo.sharedInstance.downloader.enqueue(url: url, priority: .high) { result in
+        Judo.sharedInstance.downloader.download(url: url) { result in
             switch result {
             case let .failure(error):
                 judo_log(.error, "Failed to fetch image data: %@", (error as NSError).userInfo.debugDescription)

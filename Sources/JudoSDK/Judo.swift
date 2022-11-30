@@ -180,151 +180,29 @@ public final class Judo {
     
     // MARK: Methods
     
-    @available(*, deprecated, message: "Manually pre-fetching assets is no longer supported")
+    @available(*, deprecated, message: "Synchonization with the Judo Cloud is no longer supported.")
     public func performSync(prefetchAssets: Bool, completion: (() -> Void)? = nil) {
-        performSync(completion: completion)
+        completion?()
     }
     
-    /// Call this method to instruct Judo to (asynchronously) perform a sync.
-    /// - Parameters:
-    ///   - completion: Completion handler.
+    @available(*, deprecated, message: "Synchonization with the Judo Cloud is no longer supported.")
     public func performSync(completion: (() -> Void)? = nil) {
-        if self.configuration.accessToken == nil, self.configuration.domain == nil {
-            judo_log(.debug, "Ingoring sync request if the access token and domain are not set.")
-            return
-        }
-        
-        if #available(iOS 13.0, *) {
-            repository.syncService.sync {
-                completion?()
-            }
-        } else {
-            judo_log(.debug, "Judo runs in skeleton mode on iOS <13, ignoring sync request.")
-        }
+        completion?()
     }
     
-    @available(*, deprecated, message: "Manually pre-fetching assets is no longer supported")
+    @available(*, deprecated, message: "Manually pre-fetching assets is no longer supported.")
     public func prefetchAssets(completion: (() -> Void)? = nil) {
         completion?()
     }
     
-    private let prefetchQueue = DispatchQueue(label: "app.judo.prefetch-assets")
-    
-    // This method is no-longer in-use but remains for a future implementation
-    // of pre-fetching assets.
-    private func __prefetchAssets(completion: (() -> Void)? = nil) {
-        // Gather image URLs from known (at least expected)
-        // urls (Images) and enqueue to download with low priority
-        
-        guard #available(iOS 13.0, *) else {
-            judo_log(.error, "Judo runs in skeleton mode on iOS <13, ignoring asset prefetch request.")
-            completion?()
-            return
-        }
-        
-        let group = DispatchGroup()
-        
-        group.enter()
-        let experienceURLs = repository.syncService.persistentFetchedExperienceURLs
-        prefetchQueue.async {
-            defer { group.leave() }
-
-            let imageURLs = experienceURLs
-                .compactMap {
-                    self.urlCache.cachedExperience(url: $0)
-                }
-                .flatMap {
-                    return $0.nodes.flatten()
-                }
-                .flatMap { node -> [URL] in
-                    switch node {
-                    case let image as Image:
-                        if image.inlineImage == nil && image.darkModeInlineImage == nil {
-                            return [image.imageURL, image.darkModeImageURL].compactMap {
-                                if let url = $0 {
-                                    return URL(string: url)
-                                } else {
-                                    return nil
-                                }
-                            }
-                        } else {
-                            return []
-                        }
-                    case let pageControl as PageControl:
-                        guard case .image(let normalImage, _, let currentImage, _) = pageControl.style else {
-                            return []
-                        }
-
-                        return [normalImage.imageURL, normalImage.darkModeImageURL, currentImage.imageURL, currentImage.darkModeImageURL].compactMap {
-                            if let url = $0 {
-                                return URL(string: url)
-                            } else {
-                                return nil
-                            }
-                        }
-                    default:
-                        return []
-                    }
-                }
-                .filter {
-                    self.assetsURLCache.cachedResponse(for: URLRequest(url: $0)) == nil
-                }
-
-            let fontURLs = experienceURLs
-                .compactMap {
-                    self.urlCache.cachedExperience(url: $0)
-                }
-                .flatMap(\.fonts)
-                .filter {
-                    self.assetsURLCache.cachedResponse(for: URLRequest(url: $0)) == nil
-                }
-
-            Set(imageURLs + fontURLs).forEach {
-                group.enter()
-                self.downloader.enqueue(url: $0, priority: .low) { _ in
-                    group.leave()
-                }
-            }
-        }
-        
-        group.notify(queue: .main) {
-            completion?()
-        }
-    }
-    
-    /// Handle a background notification.
-    /// - Parameters:
-    ///   - userInfo: A dictionary that contains data from the notification payload.
-    ///   - completionHandler: The block to execute after the operation completes.
+    @available(*, deprecated, message: "Push notifications are no longer needed by the Judo SDK.")
     public func handleDidReceiveRemoteNotification(userInfo: [AnyHashable : Any], completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
-        guard let judoDictionary = userInfo["judo"] as? [AnyHashable: Any], let action = judoDictionary["action"] as? String, action == "SYNC" else {
-            completionHandler(.noData)
-            return
-        }
-
-        performSync {
-            completionHandler(.newData)
-        }
+        
     }
 
-    /// Register and schedule background refresh task.
-    ///
-    /// Register each task identifier only once. The system kills the app on the second registration of the same task identifier.
-    /// - Parameter taskIdentifier: A unique string containing the identifier of the task.
-    /// - Parameter timeInterval: The time interval after what run the task.
+    @available(*, deprecated, message: "Synchonization with the Judo Cloud is no longer supported.")
     public func registerAppRefreshTask(taskIdentifier: String, timeInterval: TimeInterval = 15 * 60) {
-        precondition(!taskIdentifier.isEmpty, "Missing task identifier.")
-        precondition(!(configuration.accessToken?.isEmpty ?? true), "Missing Judo access token.")
-        precondition(!(configuration.domain?.isEmpty ?? true), "Judo domain must be provided.")
-
-        if #available(iOS 13.0, *) {
-            AppRefreshTask.registerBackgroundTask(taskIdentifier: taskIdentifier, timeInterval: timeInterval)
-            NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { (notification) in
-                AppRefreshTask.scheduleJudoRefresh(taskIdentifier: taskIdentifier, timeInterval: timeInterval)
-            }
-        } else {
-            judo_log(.debug, "Judo runs in skeleton mode on iOS <13, ignoring background app refresh task registration request.")
-        }
+        
     }
 
     // MARK: Computed Values
@@ -340,32 +218,14 @@ public final class Judo {
     
     // MARK: Register
     
+    @available(*, deprecated, message: "Push notifications are no longer needed by the Judo SDK.")
     public var deviceToken: String? {
-        Judo.userDefaults.string(forKey: "deviceToken")
+        return nil
     }
     
-    /// The last sent push token is stored in memory to ensure that we send no duplicate register events within a single app session, particularly helpful if developers frequently request the push token from iOS.
-    ///
-    /// NB this is done in lieu of checking if `deviceToken` has changed to ensure that at least one (even if duplicate) `register` event goes out per app session.
-    private var lastSentToken: String?
-    
+    @available(*, deprecated, message: "Push notifications are no longer needed by in the Judo SDK.")
     public func registeredForRemoteNotifications(deviceToken: Data) {
-        let hexValue = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
-        
-        Judo.userDefaults.setValue(hexValue, forKey: "deviceToken")
-        
-        guard lastSentToken != hexValue else {
-            return
-        }
-        lastSentToken = hexValue
-        
-        switch configuration.analyticsMode {
-        case .default, .anonymous, .minimal:
-            let event = Event.register
-            track(event: event)
-        case .disabled:
-            break
-        }
+
     }
     
     // MARK: Identity
@@ -431,7 +291,7 @@ public final class Judo {
             return
         }
 
-        let context = EventContext(deviceToken: deviceToken)
+        let context = EventContext()
         
         var payload = EventPayload(
             anonymousID: anonymousID,

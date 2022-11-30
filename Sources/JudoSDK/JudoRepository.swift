@@ -18,14 +18,13 @@ import JudoModel
 import os.log
 
 final public class JudoRepository {
-
     enum Error: Swift.Error {
         case notAvailable
     }
-
-    /// Data synchronization service
-    let syncService = SyncService()
     
+    /// Data synchronization service
+    let downloadService = DownloadService()
+
     /// Retrieve Experience data.
     /// - Parameter url: Experience URL
     public func retrieveExperience(url: URL, ignoreCache: Bool = false, completion: @escaping (Result<Experience, Swift.Error>) -> Void) {
@@ -37,8 +36,7 @@ final public class JudoRepository {
             return
         }
         
-        
-        syncService.fetchExperienceData(url: url, cachePolicy: ignoreCache ? .reloadIgnoringLocalAndRemoteCacheData : .returnCacheDataElseLoad) { result in
+        downloadService.fetchExperienceData(url: url, cachePolicy: ignoreCache ? .reloadIgnoringLocalAndRemoteCacheData : .returnCacheDataElseLoad) { result in
             do {
                 let experienceData = try result.get()
                 let experience = try Experience(decode: experienceData)

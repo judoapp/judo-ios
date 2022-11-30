@@ -52,8 +52,6 @@ extension EventPayload: Codable {
         
         let type = try container.decode(String.self, forKey: .type)
         switch type {
-        case "register":
-            event = .register
         case "identify":
             let traits = try container.decode(JSON.self, forKey: .traits)
             event = .identify(traits: traits)
@@ -79,8 +77,6 @@ extension EventPayload: Codable {
         try container.encodeIfPresent(userID, forKey: .userID)
         
         switch event {
-        case .register:
-            try container.encode("register", forKey: .type)
         case .identify(let traits):
             try container.encode("identify", forKey: .type)
             try container.encode(traits, forKey: .traits)
@@ -94,14 +90,11 @@ extension EventPayload: Codable {
 }
 
 enum Event: CustomStringConvertible {
-    case register
     case identify(traits: JSON?)
     case screen(properties: JSON)
     
     var description: String {
         switch self {
-        case .register:
-            return "register"
         case .identify:
             return "identify"
         case .screen:
@@ -113,12 +106,10 @@ enum Event: CustomStringConvertible {
 struct EventContext: Codable {
     struct Device: Codable {
         var id: String
-        var token: String?
         var buildEnvironment: BuildEnvironment
         
-        init(token: String?) {
+        init() {
             self.id = UIDevice.current.identifierForVendor?.uuidString ?? ""
-            self.token = token
             self.buildEnvironment = _buildEnvironment
         }
     }
@@ -137,8 +128,8 @@ struct EventContext: Codable {
     var os: OperatingSystem
     var locale: String
     
-    init(deviceToken: String?) {
-        device = Device(token: deviceToken)
+    init() {
+        device = Device()
         os = OperatingSystem()
         locale = Locale.preferredLanguages.first ?? "" // Locale.current.identifier
     }

@@ -123,7 +123,7 @@ private class VideoPlayerViewController: AVPlayerViewController {
     // MARK: - Poster
     
     func setPosterImage(url: URL) {
-        Judo.sharedInstance.downloader.enqueue(url: url, priority: .high) { [weak self] result in
+        Judo.sharedInstance.downloader.download(url: url) { [weak self] result in
             guard let data = try? result.get(), let image = UIImage(data: data) else {
                 return
             }
