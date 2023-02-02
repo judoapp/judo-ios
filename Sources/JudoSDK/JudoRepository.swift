@@ -36,7 +36,7 @@ final public class JudoRepository {
             return
         }
         
-        downloadService.fetchExperienceData(url: url, cachePolicy: ignoreCache ? .reloadIgnoringLocalAndRemoteCacheData : .returnCacheDataElseLoad) { result in
+        downloadService.fetchExperienceData(url: url, cachePolicy: ignoreCache ? .reloadIgnoringLocalAndRemoteCacheData : .useProtocolCachePolicy) { result in
             do {
                 let experienceData = try result.get()
                 let experience = try Experience(decode: experienceData)
