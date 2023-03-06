@@ -39,15 +39,13 @@ struct RectangleView: View {
                     .fill(color)
                 }
             case .gradient(let gradientVariants):
-                if let gradientVariants = gradientVariants {
-                    RoundedRectangle(
-                        cornerRadius: CGFloat(rectangle.cornerRadius),
-                        style: .circular
-                    )
-                    .fill(
-                        gradientVariants.resolve(colorScheme: colorScheme, colorSchemeContrast: colorSchemeContrast).swiftUIGradient()
-                    )
-                }
+                RoundedRectangle(
+                    cornerRadius: CGFloat(rectangle.cornerRadius),
+                    style: .circular
+                )
+                .fill(
+                    gradientVariants.resolve(colorScheme: colorScheme, colorSchemeContrast: colorSchemeContrast).swiftUIGradient()
+                )
             }
             
             if let border = rectangle.border {
