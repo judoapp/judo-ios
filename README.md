@@ -1,4 +1,4 @@
 # DEPRECATED
-This SDK is no longer mainted. It has been replaced with the Judo SwiftUI SDK: https://github.com/judoapp/judo-swiftui.
+This SDK is no longer maintained. It has been replaced with the Judo SwiftUI SDK: https://github.com/judoapp/judo-swiftui.
 
 [![No Maintenance Intended](http://unmaintained.tech/badge.svg)](http://unmaintained.tech/)
